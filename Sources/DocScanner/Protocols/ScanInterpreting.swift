@@ -9,5 +9,5 @@ import Foundation
 import VisionKit
 
 public protocol ScanInterpreting: Actor {
-     func parseAndInterprete(scans: VNDocumentCameraScan) async -> ScanResponse
+     func parseAndInterpret(scans: VNDocumentCameraScan) async -> ScanResponse
 }

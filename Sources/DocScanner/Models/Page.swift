@@ -8,7 +8,11 @@
 import Foundation
 import UIKit
 
-public struct Page {
+public struct Page: Identifiable, Hashable {
+    public var id: Int {
+        pageNumber + hashValue
+    }
+    
     public let pageNumber: Int
     public let image: UIImage
     public let text: [String]

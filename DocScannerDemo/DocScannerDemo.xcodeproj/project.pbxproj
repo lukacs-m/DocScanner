@@ -36,6 +36,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5BEC04752A9B8411001DEC58 /* IgnoredWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IgnoredWords.swift; path = ../Sources/DocScanner/Models/IgnoredWords.swift; sourceTree = "<group>"; };
 		B867F9F22A96C8D50025054C /* DocScannerDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DocScannerDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B867F9F52A96C8D50025054C /* DocScannerDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocScannerDemoApp.swift; sourceTree = "<group>"; };
 		B867F9F72A96C8D50025054C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -79,6 +80,7 @@
 		B867F9E92A96C8D50025054C = {
 			isa = PBXGroup;
 			children = (
+				5BEC04752A9B8411001DEC58 /* IgnoredWords.swift */,
 				B867F9F42A96C8D50025054C /* DocScannerDemo */,
 				B867FA1F2A96C9300025054C /* DocScanner */,
 				B867FA052A96C8D60025054C /* DocScannerDemoTests */,
@@ -433,10 +435,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"DocScannerDemo/Preview Content\"";
-				DEVELOPMENT_TEAM = 92833SP6PV;
+				DEVELOPMENT_TEAM = SSGRJPAZU2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Need camera permission for doc scans";
@@ -451,8 +454,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mlukacs.DocScannerDemo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mlukacs.DocScannerDemo.test;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -464,10 +468,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"DocScannerDemo/Preview Content\"";
-				DEVELOPMENT_TEAM = 92833SP6PV;
+				DEVELOPMENT_TEAM = SSGRJPAZU2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Need camera permission for doc scans";
@@ -482,8 +487,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mlukacs.DocScannerDemo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mlukacs.DocScannerDemo.test;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
