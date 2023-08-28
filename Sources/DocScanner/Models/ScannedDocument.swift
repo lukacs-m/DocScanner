@@ -1,6 +1,6 @@
 //
 //  ScannedDocument.swift
-//  
+//
 //
 //  Created by Martin Lukacs on 24/08/2023.
 //

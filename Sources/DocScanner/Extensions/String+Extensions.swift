@@ -18,7 +18,7 @@ extension String {
     
     var isNumber: Bool {
         self.range(
-            of: "^[0-9]*$", // 1
+            of: "^[0-9]*$",
             options: .regularExpression) != nil
     }
     
@@ -42,6 +42,3 @@ extension String {
         return true
     }
 }
-
-
-

@@ -6,10 +6,10 @@
 //
 
 import Foundation
-import Vision
-import VisionKit
 import NaturalLanguage
 import RegexBuilder
+import Vision
+import VisionKit
 
 public actor ScanInterpreter: ScanInterpreting {
     private let type: DocScanType
@@ -86,14 +86,14 @@ private extension ScanInterpreter {
     }
     
     func parseCardNumber(from infos: [String]) -> String? {
-        if let creditCardNumber = infos.filter({ $0.spaceTrimmed.isNumber })
-            .first(where: { $0.count >= 13 && ["4", "5", "3", "6"]
-                .contains($0.first) }) {
+        if let creditCardNumber = infos.first(where: { $0.spaceTrimmed.isNumber &&
+            $0.count >= 13 &&
+            ["4", "5", "3", "6"].contains($0.first) }) {
             return creditCardNumber
         }
         
         var creditCardNumber = infos
-            .filter { !$0.contains("/")}
+            .filter { !$0.contains("/") }
             .filter { $0.rangeOfCharacter(from: .letters) == nil && $0.count >= 4 }
             .joined(separator: " ")
         
@@ -110,10 +110,8 @@ private extension ScanInterpreter {
               components.count == 2 else {
             return nil
         }
-        for component in components {
-            if !component.isNumber {
-                return nil
-            }
+        for component in components where !component.isNumber {
+            return nil
         }
         
         return text
@@ -169,17 +167,17 @@ private extension ScanInterpreter {
         
         var textRecognitionRequest = VNRecognizeTextRequest()
         textRecognitionRequest.recognitionLevel = .accurate
-        textRecognitionRequest.usesLanguageCorrection =  type == .card ? false : true
+        textRecognitionRequest.usesLanguageCorrection = type == .card ? false : true
         if type == .card {
             textRecognitionRequest.customWords = CardType.allCases.map { $0.rawValue } + ["Expiry Date"]
         }
-        textRecognitionRequest = VNRecognizeTextRequest() { (request, error) in
+        textRecognitionRequest = VNRecognizeTextRequest { request, _ in
             guard let results = request.results,
                   !results.isEmpty,
                   let requestResults = request.results as? [VNRecognizedTextObservation]
             else { return }
             recognizedText = requestResults.compactMap { observation in
-                return observation.topCandidates(1).first?.string
+                observation.topCandidates(1).first?.string
             }
         }
         

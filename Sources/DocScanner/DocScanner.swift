@@ -1,7 +1,7 @@
 import Combine
+import SwiftUI
 import Vision
 import VisionKit
-import SwiftUI
 
 public struct DocScanner: UIViewControllerRepresentable {
     private let interpreter: ScanInterpreting?
@@ -38,16 +38,17 @@ public struct DocScanner: UIViewControllerRepresentable {
                     completionHandler: completionHandler)
     }
     
-    final public class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate {
+    public final class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate {
+        @Binding var scanResult: ScanResponse?
+
         private let interpreter: ScanInterpreting?
         private let completionHandler: (Result<ScanResponse?, Error>) -> Void
         private let resultStream: PassthroughSubject<ScanResponse?, Error>?
-        @Binding var scanResult: ScanResponse?
         
         init(with interpreter: ScanInterpreting? = nil,
              scanResult: Binding<ScanResponse?> = Binding.constant(nil),
-             resultStream: PassthroughSubject<ScanResponse?, Error>?,
-             completionHandler: @escaping (Result<ScanResponse?, Error>) -> Void) {
+             resultStream: PassthroughSubject<ScanResponse?, Error>? = nil,
+             completionHandler: @escaping (Result<ScanResponse?, Error>) -> Void = { _ in }) {
             self.completionHandler = completionHandler
             self._scanResult = scanResult
             self.resultStream = resultStream

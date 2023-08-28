@@ -36,7 +36,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		5BEC04752A9B8411001DEC58 /* IgnoredWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IgnoredWords.swift; path = ../Sources/DocScanner/Models/IgnoredWords.swift; sourceTree = "<group>"; };
 		B867F9F22A96C8D50025054C /* DocScannerDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DocScannerDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B867F9F52A96C8D50025054C /* DocScannerDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocScannerDemoApp.swift; sourceTree = "<group>"; };
 		B867F9F72A96C8D50025054C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -80,7 +79,6 @@
 		B867F9E92A96C8D50025054C = {
 			isa = PBXGroup;
 			children = (
-				5BEC04752A9B8411001DEC58 /* IgnoredWords.swift */,
 				B867F9F42A96C8D50025054C /* DocScannerDemo */,
 				B867FA1F2A96C9300025054C /* DocScanner */,
 				B867FA052A96C8D60025054C /* DocScannerDemoTests */,
