@@ -14,14 +14,20 @@ final class ContentViewModel: ObservableObject {
     private var scanType: DocScanType = .document
     @Published var showScanner = false    
     let scanResponsePublisher: PassthroughSubject<ScanResponse?, Error> = .init()
-    private var cancellable: AnyCancellable?
+    private var cancellable = Set<AnyCancellable>()
     
     init() {
-        cancellable = scanResponsePublisher
+       scanResponsePublisher
             .receive(on: DispatchQueue.main)
             .sink { _ in } receiveValue: { scanResult in
                 print("Publisher scan results: \(String(describing: scanResult))")
-            }
+            }.store(in: &cancellable)
+        
+        $scanResponse
+            .receive(on: DispatchQueue.main)
+            .sink { scanResult in
+                print("@Published scan results: \(String(describing: scanResult))")
+            }.store(in: &cancellable)
     }
 
     var interpretor: ScanInterpreter {
