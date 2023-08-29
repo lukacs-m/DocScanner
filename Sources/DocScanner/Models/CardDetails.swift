@@ -45,7 +45,7 @@ public struct CardDetails: Hashable, Identifiable, ScanResponse {
 // American Express cards begin with a 3, followed by a 4 or a 7 has 15 digits
 // Discover cards begin with a 6 and have 16 digits
 // Diners Club and Carte Blanche cards begin with a 3, followed by a 0, 6, or 8 and have 14 digits
-public enum CardType: String, CaseIterable, Identifiable {
+public enum CardType: String, CaseIterable, Identifiable, Sendable {
     case masterCard = "MasterCard"
     case visa = "Visa"
     case amex = "Amex"
@@ -94,7 +94,7 @@ public enum CardType: String, CaseIterable, Identifiable {
 // 7: Petroleum and other future industry assignments
 // 8: Healthcare, telecommunications and other future industry assignments
 // 9: For assignment by national standards bodies
-public enum CardIndustry: String, CaseIterable, Identifiable {
+public enum CardIndustry: String, CaseIterable, Identifiable, Sendable {
     case industry = "ISO/TC 68 and other industry assignments"
     case airlines = "Airlines"
     case airlinesFinancialAndFuture = "Airlines, financial and other future industry assignments"

@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-public struct Page: Identifiable, Hashable {
+public struct Page: Identifiable, Hashable, Sendable {
     public var id: Int {
         pageNumber + hashValue
     }

@@ -27,6 +27,9 @@ let package = Package(
             resources: [
                 .process("Resources/ignoredWords.json")
             ],
+            swiftSettings: [
+                SwiftSetting.unsafeFlags(["-Xfrontend", "-strict-concurrency=complete"])
+            ],
             plugins: [.plugin(name: "SwiftLintPlugin", package: "SwiftLint")]
         ),
         .testTarget(

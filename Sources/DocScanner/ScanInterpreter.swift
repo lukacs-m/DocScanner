@@ -1,5 +1,5 @@
 //
-//  ScanInterpretor.swift
+//  ScanInterpreter.swift
 //
 //
 //  Created by Martin Lukacs on 24/08/2023.
@@ -7,10 +7,13 @@
 
 import Foundation
 import NaturalLanguage
-import RegexBuilder
 import Vision
 import VisionKit
 
+/**
+ The `ScanInterpreter` actor provides document interpretation functionality for scanned documents and cards.
+ It utilizes the Vision and VisionKit frameworks to extract text from scanned images and interprets the text to construct a `ScanResponse`.
+ */
 public actor ScanInterpreter: ScanInterpreting {
     private let type: DocScanType
     private let ignoredWords: IgnoredWords?
@@ -20,7 +23,14 @@ public actor ScanInterpreter: ScanInterpreting {
         self.ignoredWords = ScanInterpreter.loadJson(filename: "ignoredWords")
     }
     
-    public func parseAndInterpret(scans: VNDocumentCameraScan) async -> ScanResponse {
+    /**
+     Parses and interprets scanned document pages.
+     
+     - Parameter scans: A `VNDocumentCameraScan` object containing scanned document pages.
+     
+     - Returns: A `ScanResponse` that represents the interpretation of the scanned document.
+     */
+    public func parseAndInterpret(scans: VNDocumentCameraScan) async -> any ScanResponse {
         switch type {
         case .card:
             return parseCard(scan: scans)
@@ -32,7 +42,7 @@ public actor ScanInterpreter: ScanInterpreting {
 
 // MARK: - Documents
 private extension ScanInterpreter {
-    func parseDocument(scans: VNDocumentCameraScan) -> ScanResponse {
+    func parseDocument(scans: VNDocumentCameraScan) -> any ScanResponse {
         let scanPages = (0..<scans.pageCount).compactMap { pageNumber -> Page? in
             let image = scans.imageOfPage(at: pageNumber)
             guard let text = extractText(image: image)  else {
@@ -48,7 +58,14 @@ private extension ScanInterpreter {
 
 // MARK: - Cards
 private extension ScanInterpreter {
-    func parseCard(scan: VNDocumentCameraScan) -> ScanResponse {
+    /**
+       Parses and interprets a scanned card.
+       
+       - Parameter scan: A `VNDocumentCameraScan` object containing a scanned card image.
+       
+       - Returns: A `ScanResponse` that represents the interpretation of the scanned card.
+       */
+    func parseCard(scan: VNDocumentCameraScan) -> any ScanResponse {
         let image = scan.imageOfPage(at: 0)
         guard let text = extractText(image: image) else {
             return CardDetails.empty
@@ -56,7 +73,7 @@ private extension ScanInterpreter {
         return parseCardResults(for: text, and: image)
     }
     
-    func parseCardResults(for recognizedText: [String], and image: UIImage) -> ScanResponse {
+    func parseCardResults(for recognizedText: [String], and image: UIImage) -> any ScanResponse {
         var expiryDate: String?
         var name: String?
         var creditCardNumber: String?
@@ -85,6 +102,13 @@ private extension ScanInterpreter {
                            cvvNumber: cvv)
     }
     
+    /**
+     Parses and extracts the card number from recognized text.
+     
+     - Parameter infos: An array of recognized text strings.
+     
+     - Returns: The card number as a string.
+     */
     func parseCardNumber(from infos: [String]) -> String? {
         if let creditCardNumber = infos.first(where: { $0.spaceTrimmed.isNumber &&
             $0.count >= 13 &&
@@ -103,6 +127,13 @@ private extension ScanInterpreter {
         return creditCardNumber
     }
     
+    /**
+     Parses and extracts the expiry date from recognized text.
+     
+     - Parameter text: The recognized text string.
+     
+     - Returns: The expiry date as a string.
+     */
     func parseExpiryDate(from text: String) -> String? {
         let numberRange = 5...7
         let components = text.components(separatedBy: "/")
@@ -117,6 +148,13 @@ private extension ScanInterpreter {
         return text
     }
     
+    /**
+     Parses and extracts the cardholder's name from recognized text.
+     
+     - Parameter text: The recognized text string.
+     
+     - Returns: The cardholder's name as a string.
+     */
     func parseName(from text: String) -> String? {
         if let detectedName = naturalLanguageNameParser(from: text) {
             return detectedName
@@ -135,7 +173,15 @@ private extension ScanInterpreter {
         return text
     }
     
-    // CVV codes are a 3-digit number for Visa, Mastercard, and Discover cards, and a 4-digit number for Amex.
+    /**
+     Parses and extracts the CVV (Card Verification Value) from recognized text.
+     CVV codes are a 3-digit number for Visa, Mastercard, and Discover cards, and a 4-digit number for Amex.
+     
+     - Parameter text: The recognized text string.
+     - Parameter cardNumber: The card number for validation.
+     
+     - Returns: The CVV as a string.
+     */
     func parseCVV(from text: String, and cardNumber: String?) -> String? {
         guard let cardNumber else {
             return nil
@@ -160,6 +206,13 @@ private extension ScanInterpreter {
 // MARK: - Utils
 
 private extension ScanInterpreter {
+    /**
+     Extracts recognized text from an image.
+     
+     - Parameter image: A `UIImage` containing text.
+     
+     - Returns: An array of recognized text strings, or `nil` if text extraction fails.
+     */
     func extractText(image: UIImage?) -> [String]? {
         guard let cgImage = image?.cgImage else { return nil }
         
@@ -190,6 +243,13 @@ private extension ScanInterpreter {
         }
     }
     
+    /**
+     Uses Natural Language Processing (NLP) to extract a personal name from text.
+     
+     - Parameter text: The text from which to extract a name.
+     
+     - Returns: The detected name as a string, or `nil` if no name is detected.
+     */
     func naturalLanguageNameParser(from text: String) -> String? {
         var currentName: String?
         let tagger = NLTagger(tagSchemes: [.nameType])
@@ -202,10 +262,8 @@ private extension ScanInterpreter {
                              unit: .word,
                              scheme: .nameType,
                              options: options) { tag, tokenRange in
-            // Get the most likely tag, and print it if it's a named entity.
             if let tag = tag,
                tags.contains(tag) {
-                print("\(text[tokenRange]): \(tag.rawValue)")
                 currentName = String(text[tokenRange])
             }
             

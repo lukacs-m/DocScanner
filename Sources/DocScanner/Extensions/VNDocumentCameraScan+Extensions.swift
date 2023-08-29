@@ -8,4 +8,4 @@
 import Foundation
 import VisionKit
 
-extension VNDocumentCameraScan: ScanResponse {}
+extension VNDocumentCameraScan: @unchecked Sendable, ScanResponse {}
