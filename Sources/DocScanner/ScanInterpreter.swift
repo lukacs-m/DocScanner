@@ -30,7 +30,7 @@ public actor ScanInterpreter: ScanInterpreting {
      
      - Returns: A `ScanResponse` that represents the interpretation of the scanned document.
      */
-    public func parseAndInterpret(scans: VNDocumentCameraScan) async -> any ScanResponse {
+    public func parseAndInterpret(scans: VNDocumentCameraScan) async -> any ScanResult {
         switch type {
         case .card:
             return parseCard(scan: scans)
@@ -42,7 +42,7 @@ public actor ScanInterpreter: ScanInterpreting {
 
 // MARK: - Documents
 private extension ScanInterpreter {
-    func parseDocument(scans: VNDocumentCameraScan) -> any ScanResponse {
+    func parseDocument(scans: VNDocumentCameraScan) -> any ScanResult {
         let scanPages = (0..<scans.pageCount).compactMap { pageNumber -> Page? in
             let image = scans.imageOfPage(at: pageNumber)
             guard let text = extractText(image: image)  else {
@@ -52,7 +52,7 @@ private extension ScanInterpreter {
             return Page(pageNumber: pageNumber, image: image, text: text)
         }
         
-        return ScannedDocument(scannedPages: scanPages)
+        return ScannedDocument(title: scans.title, scannedPages: scanPages)
     }
 }
 
@@ -65,7 +65,7 @@ private extension ScanInterpreter {
        
        - Returns: A `ScanResponse` that represents the interpretation of the scanned card.
        */
-    func parseCard(scan: VNDocumentCameraScan) -> any ScanResponse {
+    func parseCard(scan: VNDocumentCameraScan) -> any ScanResult {
         let image = scan.imageOfPage(at: 0)
         guard let text = extractText(image: image) else {
             return CardDetails.empty
@@ -73,7 +73,7 @@ private extension ScanInterpreter {
         return parseCardResults(for: text, and: image)
     }
     
-    func parseCardResults(for recognizedText: [String], and image: UIImage) -> any ScanResponse {
+    func parseCardResults(for recognizedText: [String], and image: UIImage) -> any ScanResult {
         var expiryDate: String?
         var name: String?
         var creditCardNumber: String?

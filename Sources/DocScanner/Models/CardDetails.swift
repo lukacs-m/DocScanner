@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-public struct CardDetails: Hashable, Identifiable, ScanResponse {
+public struct CardDetails: Hashable, Identifiable, ScanResult {
     public let number: String?
     public let name: String?
     public let expiryDate: String?

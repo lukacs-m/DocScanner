@@ -20,7 +20,7 @@ This repository contains `DocScanner`, a SwiftUI wrapper around `VNDocumentCamer
 `DocScanner` is installed via the official [Swift Package Manager](https://swift.org/package-manager/).  
 
 Select `Xcode`>`File`> `Swift Packages`>`Add Package Dependency...`  
-and add `https://github.com/your/repo.git`.
+and add `https://github.com/lukacs-m/DocScanner`.
 
 In our info.plist file, you will need to add a new propertie called `"Privacy — Camera Usage Description"` and set a description explaining the usage of the camera in your app. For example: **"Allow camera usage to scan documents and parse their content."**
 
@@ -57,39 +57,7 @@ struct ContentView: View {
         }
     }
 }
-
-Please refer to `DocScannerDemo` to have ideas on how to use and interact with the scan results
-
-## DocScanner
-
-The `DocScanner` struct provides a convenient way to integrate document scanning functionality into your SwiftUI apps. It wraps the `VNDocumentCameraViewController` and handles the scanning process. You can interpret the scanned documents by providing a `ScanInterpreter` implementation.
-
-The View returns the scanned results using 3 distinct methods:
-- Callback
--  `Combine` `PassthroughSubject`
-- SwiftUI `@Binding`
-
-All of the above are optional and can be used or not. You can combine several of them at the same time if wanted.
-
-### Example
-
-Here's how you can use the `DocScanner` in your SwiftUI:
-
-```swift
-import SwiftUI
-import DocScanner
-
-struct ContentView: View {
-    @State var scanResult: ScanResponse?
-
-    var body: some View {
-        VStack {
-            // Other UI components
-            DocScanner(scanResult: $scanResult)
-            // Other UI components
-        }
-    }
-}
+```
 
 Please refer to `DocScannerDemo` to have ideas on how to use and interact with the scan results
 
@@ -99,6 +67,6 @@ The package come with a free `ScanInterpreter`. This actor is responsible for in
 
 We can of course decide to create your on interpreter to use with `DocScanner`.
 
-If you scan documents the reponse of `ScanInterpreter` will be of type `ScannedDocument` otherwise it returns a `CardDetails`.
+If you scan documents the response of `ScanInterpreter` will be of type `ScannedDocument` otherwise it returns a `CardDetails`.
 
 As for the interpreter feel free to create you own `ScanResponse` if needed.

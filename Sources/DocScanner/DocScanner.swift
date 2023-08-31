@@ -8,11 +8,16 @@ import VisionKit
  */
 public struct DocScanner: UIViewControllerRepresentable {
     private let interpreter: ScanInterpreting?
-    private let completionHandler: (Result<ScanResponse?, Error>) -> Void
-    private let resultStream: PassthroughSubject<ScanResponse?, Error>?
-    @Binding private var scanResult: ScanResponse?
+    private let completionHandler: (Result<ScanResult?, Error>) -> Void
+    private let resultStream: PassthroughSubject<ScanResult?, Error>?
+    @Binding private var scanResult: ScanResult?
     
     public typealias UIViewControllerType = VNDocumentCameraViewController
+    
+    @MainActor
+    public static var isSupported: Bool {
+        VNDocumentCameraViewController.isSupported
+    }
     
     /**
      Initializes a `DocScanner` view.
@@ -24,9 +29,9 @@ public struct DocScanner: UIViewControllerRepresentable {
         - completion: A closure to handle the completion of scanning.
     */
     public init(with interpreter: ScanInterpreting? = nil,
-                scanResult: Binding<ScanResponse?> = Binding.constant(nil),
-                resultStream: PassthroughSubject<ScanResponse?, Error>? = nil,
-                completion: @escaping (Result<ScanResponse?, Error>) -> Void = { _ in }) {
+                scanResult: Binding<ScanResult?> = Binding.constant(nil),
+                resultStream: PassthroughSubject<ScanResult?, Error>? = nil,
+                completion: @escaping (Result<ScanResult?, Error>) -> Void = { _ in }) {
         self.completionHandler = completion
         self._scanResult = scanResult
         self.resultStream = resultStream
@@ -51,15 +56,15 @@ public struct DocScanner: UIViewControllerRepresentable {
     }
     
     public final class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate, @unchecked Sendable {
-        private let scanResult: Binding<ScanResponse?>
+        private let scanResult: Binding<ScanResult?>
         private let interpreter: ScanInterpreting?
-        private let completionHandler: (Result<ScanResponse?, Error>) -> Void
-        private let resultStream: PassthroughSubject<ScanResponse?, Error>?
+        private let completionHandler: (Result<ScanResult?, Error>) -> Void
+        private let resultStream: PassthroughSubject<ScanResult?, Error>?
         
         init(with interpreter: ScanInterpreting? = nil,
-             scanResult: Binding<ScanResponse?> = Binding.constant(nil),
-             resultStream: PassthroughSubject<ScanResponse?, Error>? = nil,
-             completionHandler: @escaping (Result<ScanResponse?, Error>) -> Void = { _ in }) {
+             scanResult: Binding<ScanResult?> = Binding.constant(nil),
+             resultStream: PassthroughSubject<ScanResult?, Error>? = nil,
+             completionHandler: @escaping (Result<ScanResult?, Error>) -> Void = { _ in }) {
             self.completionHandler = completionHandler
             self.scanResult = scanResult
             self.resultStream = resultStream
@@ -124,7 +129,7 @@ public struct DocScanner: UIViewControllerRepresentable {
             
             - Parameter result: The interpreted scan response.
         */
-        private func respond(with result: ScanResponse) {
+        private func respond(with result: ScanResult) {
             Task { @MainActor [weak self] in
                 self?.completionHandler(.success(result))
                 self?.scanResult.wrappedValue = result

@@ -10,10 +10,10 @@ import DocScanner
 import Combine
 
 final class ContentViewModel: ObservableObject {
-    @Published var scanResponse: ScanResponse?
+    @Published var scanResponse: ScanResult?
     private var scanType: DocScanType = .document
     @Published var showScanner = false    
-    let scanResponsePublisher: PassthroughSubject<ScanResponse?, Error> = .init()
+    let scanResponsePublisher: PassthroughSubject<ScanResult?, Error> = .init()
     private var cancellable = Set<AnyCancellable>()
     
     init() {
@@ -39,7 +39,7 @@ final class ContentViewModel: ObservableObject {
         showScanner.toggle()
     }
     
-    func callbackResults(results: Result<ScanResponse?, Error>) {
+    func callbackResults(results: Result<ScanResult?, Error>) {
         print("Callback scan results: \(results)")
     }
 }

@@ -7,10 +7,12 @@
 
 import Foundation
 
-public struct ScannedDocument: ScanResponse {
+public struct ScannedDocument: ScanResult, Sendable {
+    public let title: String
     public let scannedPages: [Page]
     
-    public init(scannedPages: [Page]) {
+    public init(title: String, scannedPages: [Page]) {
         self.scannedPages = scannedPages
+        self.title = title
     }
 }
