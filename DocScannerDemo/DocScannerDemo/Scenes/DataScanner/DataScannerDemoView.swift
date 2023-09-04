@@ -162,7 +162,3 @@ private extension DataScannerDemoView {
         .padding()
     }
 }
-
-#Preview {
-    DataScannerDemoView()
-}

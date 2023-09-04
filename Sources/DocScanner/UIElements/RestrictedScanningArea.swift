@@ -36,7 +36,7 @@ public struct RestrictedScanningAreaConfig {
 
 public struct RestrictedScanningArea: View {
     @Binding var regionOfInterest: CGRect?
-   let configuration: RestrictedScanningAreaConfig
+    let configuration: RestrictedScanningAreaConfig
     
     public init(configuration: RestrictedScanningAreaConfig = .default,
                 regionOfInterest: Binding<CGRect?> = Binding.constant(nil)) {
@@ -71,8 +71,4 @@ public struct RestrictedScanningArea: View {
             EmptyView()
         }
     }
-}
-
-#Preview {
-    RestrictedScanningArea(configuration: RestrictedScanningAreaConfig.default)
 }

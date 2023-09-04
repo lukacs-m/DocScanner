@@ -97,6 +97,3 @@ private extension DocScannerDemoView {
     }
 }
 
-#Preview {
-    DocScannerDemoView()
-}

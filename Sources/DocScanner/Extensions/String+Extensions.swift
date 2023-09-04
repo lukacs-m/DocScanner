@@ -98,11 +98,9 @@ extension String {
             return nil
         }
         
-//        let diffLineComponents = self.components(separatedBy: "\n")
         let numberRange = 5...7
         let dateElements = expiryDate.components(separatedBy: "/")
         guard numberRange.contains(expiryDate.count),
-//            self.contains("/"),
         dateElements.count == 2 else {
             return nil
         }
