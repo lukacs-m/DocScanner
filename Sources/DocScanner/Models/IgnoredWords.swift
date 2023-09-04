@@ -7,6 +7,6 @@
 
 import Foundation
 
-struct IgnoredWords: Decodable {
+struct IgnoredWords: Decodable, Sendable {
     let words: [String]
 }

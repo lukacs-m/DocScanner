@@ -7,7 +7,8 @@
 
 import Foundation
 
-public enum DocScanType {
+public enum DocScanType: Sendable {
     case document
     case card
 }
+

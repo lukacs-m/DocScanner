@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct ScannedDocument: ScanResult, Sendable {
+public struct ScannedDocument: ScanResult {
     public let title: String
     public let scannedPages: [Page]
     

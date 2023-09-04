@@ -15,9 +15,11 @@
         "sort",
         "code",
         "expire",
-        "gold", "standard",
+        "gold",
+        "standard",
         "platinum",
         "world",
-        "elite"
+        "elite",
+        "expire"
     ]
 }

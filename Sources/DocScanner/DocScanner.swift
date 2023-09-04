@@ -6,6 +6,7 @@ import VisionKit
 /**
  The `DocScanner` is a tool facilitating document scanning using the device's camera and handling the scanned document results.
  */
+@MainActor
 public struct DocScanner: UIViewControllerRepresentable {
     private let interpreter: ScanInterpreting?
     private let completionHandler: (Result<ScanResult?, Error>) -> Void
@@ -14,7 +15,6 @@ public struct DocScanner: UIViewControllerRepresentable {
     
     public typealias UIViewControllerType = VNDocumentCameraViewController
     
-    @MainActor
     public static var isSupported: Bool {
         VNDocumentCameraViewController.isSupported
     }
@@ -84,12 +84,10 @@ public struct DocScanner: UIViewControllerRepresentable {
                 respond(with: scan)
                 return
             }
-            Task { [weak self] in
+            Task { @MainActor [weak self] in
                 let response = await interpreter.parseAndInterpret(scans: scan)
                 self?.respond(with: response)
-                await MainActor.run {
-                    controller.dismiss(animated: true)
-                }
+                controller.dismiss(animated: true)
             }
         }
         

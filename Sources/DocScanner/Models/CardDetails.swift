@@ -26,7 +26,7 @@ public struct CardDetails: Hashable, Identifiable, ScanResult {
         self.name = name
         self.expiryDate = expiryDate
         self.cvvNumber = cvvNumber
-        self.type = CardType(number: numberWithDelimiters?.spaceTrimmed)
+        self.type = CardType(number: numberWithDelimiters?.spaceNewLineTrimmed)
         self.industry = CardIndustry(firstDigit: numberWithDelimiters?.first)
         self.image = image
     }
@@ -35,6 +35,14 @@ public struct CardDetails: Hashable, Identifiable, ScanResult {
 
     static var empty: CardDetails {
         CardDetails()
+    }
+    
+    func updateWithImage(image: UIImage?) -> CardDetails {
+        CardDetails(image: image,
+                    numberWithDelimiters: number,
+                    name: name,
+                    expiryDate: expiryDate,
+                    cvvNumber: cvvNumber)
     }
 }
 

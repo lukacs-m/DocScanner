@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import NaturalLanguage
 import Vision
 import VisionKit
 
@@ -16,11 +15,9 @@ import VisionKit
  */
 public actor ScanInterpreter: ScanInterpreting {
     private let type: DocScanType
-    private let ignoredWords: IgnoredWords?
     
     public init(type: DocScanType = .document) {
         self.type = type
-        self.ignoredWords = ScanInterpreter.loadJson(filename: "ignoredWords")
     }
     
     /**
@@ -34,7 +31,7 @@ public actor ScanInterpreter: ScanInterpreting {
         switch type {
         case .card:
             return parseCard(scan: scans)
-        case .document:
+        default:
             return parseDocument(scans: scans)
         }
     }
@@ -57,7 +54,7 @@ private extension ScanInterpreter {
 }
 
 // MARK: - Cards
-private extension ScanInterpreter {
+ extension ScanInterpreter {
     /**
        Parses and interprets a scanned card.
        
@@ -65,32 +62,32 @@ private extension ScanInterpreter {
        
        - Returns: A `ScanResponse` that represents the interpretation of the scanned card.
        */
-    func parseCard(scan: VNDocumentCameraScan) -> any ScanResult {
-        let image = scan.imageOfPage(at: 0)
-        guard let text = extractText(image: image) else {
-            return CardDetails.empty
-        }
-        return parseCardResults(for: text, and: image)
-    }
+     private func parseCard(scan: VNDocumentCameraScan) -> any ScanResult {
+         let image = scan.imageOfPage(at: 0)
+         guard let text = extractText(image: image) else {
+             return CardDetails.empty
+         }
+         return ScanInterpreter.parseCardResults(for: text, and: image)
+     }
     
-    func parseCardResults(for recognizedText: [String], and image: UIImage) -> any ScanResult {
+    static func parseCardResults(for recognizedText: [String], and image: UIImage?) -> any ScanResult {
         var expiryDate: String?
         var name: String?
         var creditCardNumber: String?
         var cvv: String?
-        if let parsedCard = parseCardNumber(from: recognizedText) {
+        if let parsedCard = recognizedText.parseCardNumber {
             creditCardNumber = parsedCard
         }
         for text in recognizedText {
-            if let expiryDateString = parseExpiryDate(from: text) {
+            if let expiryDateString = text.parseExpiryDate {
                 expiryDate = expiryDateString
             }
             
-            if let parsedName = parseName(from: text) {
+            if let parsedName = text.parseName {
                 name = parsedName
             }
             
-            if let parsedCVV = parseCVV(from: text, and: creditCardNumber) {
+            if let parsedCVV = text.parseCVV(cardNumber: creditCardNumber) {
                 cvv = parsedCVV
             }
         }
@@ -100,106 +97,6 @@ private extension ScanInterpreter {
                            name: name,
                            expiryDate: expiryDate,
                            cvvNumber: cvv)
-    }
-    
-    /**
-     Parses and extracts the card number from recognized text.
-     
-     - Parameter infos: An array of recognized text strings.
-     
-     - Returns: The card number as a string.
-     */
-    func parseCardNumber(from infos: [String]) -> String? {
-        if let creditCardNumber = infos.first(where: { $0.spaceTrimmed.isNumber &&
-            $0.count >= 13 &&
-            ["4", "5", "3", "6"].contains($0.first) }) {
-            return creditCardNumber
-        }
-        
-        var creditCardNumber = infos
-            .filter { !$0.contains("/") }
-            .filter { $0.rangeOfCharacter(from: .letters) == nil && $0.count >= 4 }
-            .joined(separator: " ")
-        
-        if creditCardNumber.spaceTrimmed.count > 16 {
-            creditCardNumber = String(creditCardNumber.spaceTrimmed.prefix(16))
-        }
-        return creditCardNumber
-    }
-    
-    /**
-     Parses and extracts the expiry date from recognized text.
-     
-     - Parameter text: The recognized text string.
-     
-     - Returns: The expiry date as a string.
-     */
-    func parseExpiryDate(from text: String) -> String? {
-        let numberRange = 5...7
-        let components = text.components(separatedBy: "/")
-        guard numberRange.contains(text.count), text.contains("/"),
-              components.count == 2 else {
-            return nil
-        }
-        for component in components where !component.isNumber {
-            return nil
-        }
-        
-        return text
-    }
-    
-    /**
-     Parses and extracts the cardholder's name from recognized text.
-     
-     - Parameter text: The recognized text string.
-     
-     - Returns: The cardholder's name as a string.
-     */
-    func parseName(from text: String) -> String? {
-        if let detectedName = naturalLanguageNameParser(from: text) {
-            return detectedName
-        }
-        
-        let wordsToAvoid = CardType.names + (ignoredWords?.words ?? [])
-        
-        guard !wordsToAvoid.contains(text.lowercased()),
-              text.isUppercase,
-              text.rangeOfCharacter(from: .decimalDigits) == nil,
-              text.components(separatedBy: " ").count >= 2,
-              text.nameRegexChecked else {
-            return nil
-        }
-        
-        return text
-    }
-    
-    /**
-     Parses and extracts the CVV (Card Verification Value) from recognized text.
-     CVV codes are a 3-digit number for Visa, Mastercard, and Discover cards, and a 4-digit number for Amex.
-     
-     - Parameter text: The recognized text string.
-     - Parameter cardNumber: The card number for validation.
-     
-     - Returns: The CVV as a string.
-     */
-    func parseCVV(from text: String, and cardNumber: String?) -> String? {
-        guard let cardNumber else {
-            return nil
-        }
-        let type = CardType(number: cardNumber.spaceTrimmed)
-        guard type == .visa || type == .masterCard || type == .amex, text.isNumber else {
-            return nil
-        }
-        if type == .visa || type == .masterCard, text.count != 3 {
-            return nil
-        }
-        if type == .amex, text.count != 4 {
-            return nil
-        }
-        if cardNumber.contains(text) {
-            return nil
-        }
-        return text
     }
 }
 
@@ -241,48 +138,5 @@ private extension ScanInterpreter {
         } catch {
             return nil
         }
-    }
-    
-    /**
-     Uses Natural Language Processing (NLP) to extract a personal name from text.
-     
-     - Parameter text: The text from which to extract a name.
-     
-     - Returns: The detected name as a string, or `nil` if no name is detected.
-     */
-    func naturalLanguageNameParser(from text: String) -> String? {
-        var currentName: String?
-        let tagger = NLTagger(tagSchemes: [.nameType])
-        tagger.string = text
-        
-        let options: NLTagger.Options = [.omitPunctuation, .omitWhitespace, .omitOther, .joinNames]
-        let tags: [NLTag] = [.personalName]
-        
-        tagger.enumerateTags(in: text.startIndex..<text.endIndex,
-                             unit: .word,
-                             scheme: .nameType,
-                             options: options) { tag, tokenRange in
-            if let tag = tag,
-               tags.contains(tag) {
-                currentName = String(text[tokenRange])
-            }
-            
-            return true
-        }
-        
-        return currentName
-    }
-    
-    static func loadJson<T: Decodable>(filename fileName: String) -> T? {
-        if let url = Bundle.module.url(forResource: fileName, withExtension: "json") {
-            do {
-                let data = try Data(contentsOf: url)
-                let decoder = JSONDecoder()
-                return try decoder.decode(T.self, from: data)
-            } catch {
-                print("error:\(error)")
-            }
-        }
-        return nil
     }
 }
