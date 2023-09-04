@@ -11,4 +11,3 @@ public enum DocScanType: Sendable {
     case document
     case card
 }
-

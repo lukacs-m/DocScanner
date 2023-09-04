@@ -27,7 +27,6 @@ extension String {
     var spaceNewLineTrimmed: String {
      self.replacingOccurrences(of: " ", with: "")
             .replacingOccurrences(of: "\n", with: "")
-        
     }
     
     var newlineTrimmed: String {
@@ -94,7 +93,7 @@ extension String {
      */
     var parseExpiryDate: String? {
         let components = self.components(separatedBy: "\n")
-            .filter { $0.contains("/")}
+            .filter { $0.contains("/") }
         guard let expiryDate = components.first else {
             return nil
         }
@@ -175,7 +174,7 @@ extension String {
      */
      func parseCVV(cardNumber: String?) -> String? {
          let components = self.components(separatedBy: "\n")
-             .filter { !$0.contains("/")}
+             .filter { !$0.contains("/") }
          guard let cardNumber, let stringToParse = components.first else {
             return nil
         }

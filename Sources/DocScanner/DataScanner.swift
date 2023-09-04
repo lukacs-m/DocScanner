@@ -132,7 +132,7 @@ public struct DataScanner: UIViewControllerRepresentable {
     }
     
     @MainActor
-    final public class Coordinator: NSObject, DataScannerViewControllerDelegate, Sendable {
+    public final class Coordinator: NSObject, DataScannerViewControllerDelegate, Sendable {
         private let dataScannerView: DataScanner
         
         init(_ dataScannerView: DataScanner) {
@@ -264,5 +264,3 @@ public struct DataScanner: UIViewControllerRepresentable {
         }
     }
 }
-
-
