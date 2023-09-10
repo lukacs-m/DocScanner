@@ -15,19 +15,34 @@ final class DocScannerDemoViewModel: ObservableObject {
     @Published var showScanner = false
     let scanResponsePublisher: PassthroughSubject<ScanResult?, Error> = .init()
     private var cancellable = Set<AnyCancellable>()
+    private var task: Task<Void, Never>?
     
     init() {
        scanResponsePublisher
             .receive(on: DispatchQueue.main)
-            .sink { _ in } receiveValue: { scanResult in
+            .sink { completion in
+                switch completion {
+                case .finished:
+                    print("Finished")
+                case .failure(let error):
+                    print("Publisher error \(error)")
+                }
+            } receiveValue: { scanResult in
                 print("Publisher scan results: \(String(describing: scanResult))")
             }.store(in: &cancellable)
         
         $scanResponse
             .receive(on: DispatchQueue.main)
-            .sink { scanResult in
+            .sink {  scanResult in
                 print("@Published scan results: \(String(describing: scanResult))")
             }.store(in: &cancellable)
+        
+        asyncSequenceResults()
+    }
+    
+    deinit {
+        print("woot deinit DocScannerDemoViewModel")
+        task?.cancel()
     }
 
     var interpretor: ScanInterpreter {
@@ -41,5 +56,23 @@ final class DocScannerDemoViewModel: ObservableObject {
     
     func callbackResults(results: Result<ScanResult?, Error>) {
         print("Callback scan results: \(results)")
+    }
+    
+    func asyncSequenceResults() {
+        task?.cancel()
+
+        task = Task { [scanResponsePublisher] in
+            do {
+                for try await scanResult in scanResponsePublisher.values {
+                    print("asyncSequenceResults: \(String(describing: scanResult))")
+                    if Task.isCancelled {
+                        print("asyncSequenceResults cancelled")
+
+                    }
+                }
+            } catch {
+                print("AsyncSequenceResults error \(error)")
+            }
+        }
     }
 }

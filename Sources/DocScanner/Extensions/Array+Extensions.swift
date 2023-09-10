@@ -26,6 +26,11 @@ extension Array where Element == String {
             .filter { $0.rangeOfCharacter(from: .letters) == nil && $0.count >= 4 }
             .joined(separator: " ")
         
+        if creditCardNumber.spaceNewLineTrimmed.count < 13 ||
+           !["4", "5", "3", "6"].contains(creditCardNumber.first) {
+            return nil
+        }
+        
         if creditCardNumber.spaceNewLineTrimmed.count > 16 {
             creditCardNumber = String(creditCardNumber.spaceNewLineTrimmed.prefix(16))
         }

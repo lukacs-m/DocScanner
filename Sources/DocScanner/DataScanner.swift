@@ -54,7 +54,9 @@ public struct DataScannerConfiguration {
         DataScannerConfiguration(recognizedDataTypes: [.text()],
                                  documentType: .card,
                                  qualityLevel: .accurate,
-                                 recognizesMultipleItems: true)
+                                 recognizesMultipleItems: true,
+                                 isGuidanceEnabled: false,
+                                 isHighlightingEnabled: false)
     }
     
     public static var `barcode`: DataScannerConfiguration {
@@ -71,11 +73,12 @@ public struct DataScanner: UIViewControllerRepresentable {
     @Binding private var startScanning: Bool
     @Binding private var regionOfInterest: CGRect?
     @Binding private var scanResult: ScanResult?
+    @Binding private var shouldDismiss: Bool
     private let completionHandler: (Result<ScanResult?, Error>) -> Void
     private let resultStream: PassthroughSubject<ScanResult?, Error>?
-    
+  
     let configuration: DataScannerConfiguration
-    let viewController: DataScannerViewController
+    
     public typealias UIViewControllerType = DataScannerViewController
     
     public static var scannerAvailable: Bool {
@@ -85,6 +88,7 @@ public struct DataScanner: UIViewControllerRepresentable {
     
     public init(with configuration: DataScannerConfiguration,
                 startScanning: Binding<Bool>,
+                shouldDismiss: Binding<Bool> = Binding.constant(false),
                 regionOfInterest: Binding<CGRect?> = Binding.constant(nil),
                 scanResult: Binding<ScanResult?> = Binding.constant(nil),
                 resultStream: PassthroughSubject<ScanResult?, Error>? = nil,
@@ -95,45 +99,50 @@ public struct DataScanner: UIViewControllerRepresentable {
         self._scanResult = scanResult
         self.completionHandler = completion
         self.resultStream = resultStream
-        viewController = DataScannerViewController(recognizedDataTypes: configuration.recognizedDataTypes,
-                                                   qualityLevel: configuration.qualityLevel,
-                                                   recognizesMultipleItems: configuration.recognizesMultipleItems,
-                                                   isHighFrameRateTrackingEnabled: configuration.isHighFrameRateTrackingEnabled,
-                                                   isPinchToZoomEnabled: configuration.isPinchToZoomEnabled,
-                                                   isGuidanceEnabled: configuration.isGuidanceEnabled,
-                                                   isHighlightingEnabled: configuration.isHighlightingEnabled)
+        self._shouldDismiss = shouldDismiss
     }
     
     public func makeUIViewController(context: UIViewControllerRepresentableContext<DataScanner>) -> DataScannerViewController {
+        let viewController = DataScannerViewController(recognizedDataTypes: configuration.recognizedDataTypes,
+                                                       qualityLevel: configuration.qualityLevel,
+                                                       recognizesMultipleItems: configuration.recognizesMultipleItems,
+                                                       isHighFrameRateTrackingEnabled: configuration.isHighFrameRateTrackingEnabled,
+                                                       isPinchToZoomEnabled: configuration.isPinchToZoomEnabled,
+                                                       isGuidanceEnabled: configuration.isGuidanceEnabled,
+                                                       isHighlightingEnabled: configuration.isHighlightingEnabled)
         viewController.delegate = context.coordinator
+        context.coordinator.viewController = viewController
         return viewController
     }
     
     public func updateUIViewController(_ uiViewController: DataScannerViewController,
                                        context: UIViewControllerRepresentableContext<DataScanner>) {
-        addScanningRegionOfInterest()
         if startScanning, !uiViewController.isScanning {
             try? uiViewController.startScanning()
         } else if !startScanning, uiViewController.isScanning {
             uiViewController.stopScanning()
             uiViewController.dismiss(animated: true)
+            shouldDismiss = true
         }
+        addScanningRegionOfInterest(controller: uiViewController)
     }
     
     public func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
     
-    func addScanningRegionOfInterest() {
-        guard regionOfInterest != viewController.regionOfInterest else {
+    func addScanningRegionOfInterest(controller: DataScannerViewController) {
+        guard controller.isScanning,
+              regionOfInterest != controller.regionOfInterest else {
             return
         }
-        viewController.regionOfInterest = regionOfInterest
+        controller.regionOfInterest = regionOfInterest
     }
     
     @MainActor
     public final class Coordinator: NSObject, DataScannerViewControllerDelegate, Sendable {
         private let dataScannerView: DataScanner
+        weak var viewController: DataScannerViewController?
         
         init(_ dataScannerView: DataScanner) {
             self.dataScannerView = dataScannerView
@@ -190,37 +199,25 @@ public struct DataScanner: UIViewControllerRepresentable {
             dataScannerView.completionHandler(.failure(error))
             dataScannerView.scanResult = nil
             dataScannerView.resultStream?.send(nil)
+            stopScanAndDismiss()
         }
         
-        func processItem(item: RecognizedItem) {
+       private func processItem(item: RecognizedItem) {
             switch item {
             case .text(let text):
                 let data = GenericData(scannedData: [text.transcript])
                 respond(with: data)
-                dataScannerView.viewController.stopScanning()
-                dataScannerView.viewController.dismiss(animated: true)
+                stopScanAndDismiss()
             case .barcode(let codeData):
                 // Open the URL in the browser.
                 let barcode = Barcode(payload: codeData.payloadStringValue ?? "")
                 respond(with: barcode)
-                dataScannerView.viewController.stopScanning()
-                dataScannerView.viewController.dismiss(animated: true)
+                stopScanAndDismiss()
             @unknown default:
                 print("Unknown Items")
             }
         }
-        
-        /**
-         Sends the interpreted scan response to the provided result stream and completion handler.
-         
-         - Parameter result: The interpreted scan response.
-         */
-        private func respond(with result: ScanResult) {
-            dataScannerView.completionHandler(.success(result))
-            dataScannerView.scanResult = result
-            dataScannerView.resultStream?.send(result)
-        }
-        
+   
         private func scanCard(items: [RecognizedItem]) {
             let parsedText = items.filter { $0.isText }.compactMap(\.value)
             guard !parsedText.isEmpty else {
@@ -234,11 +231,10 @@ public struct DataScanner: UIViewControllerRepresentable {
                       !number.isEmpty else {
                     return
                 }
-                let image = try? await self?.dataScannerView.viewController.capturePhoto()
+                let image = try? await self?.viewController?.capturePhoto()
                 
                 self?.respond(with: card.updateWithImage(image: image))
-                self?.dataScannerView.viewController.stopScanning()
-                self?.dataScannerView.viewController.dismiss(animated: true)
+                self?.stopScanAndDismiss()
             }
         }
         
@@ -259,8 +255,26 @@ public struct DataScanner: UIViewControllerRepresentable {
             }
             let barcode = Barcode(payload: payload)
             respond(with: barcode)
-            dataScannerView.viewController.stopScanning()
-            dataScannerView.viewController.dismiss(animated: true)
+            stopScanAndDismiss()
+        }
+        
+        /**
+         Sends the interpreted scan response to the provided result stream and completion handler.
+         
+         - Parameter result: The interpreted scan response.
+         */
+        private func respond(with result: ScanResult) {
+            dataScannerView.completionHandler(.success(result))
+            dataScannerView.scanResult = result
+            dataScannerView.resultStream?.send(result)
+        }
+        
+        private func stopScanAndDismiss(shouldDismiss: Bool = true) {
+            viewController?.stopScanning()
+            if shouldDismiss {
+                dataScannerView.shouldDismiss = true
+                viewController?.dismiss(animated: true)
+            }
         }
     }
 }

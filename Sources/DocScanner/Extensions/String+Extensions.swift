@@ -117,6 +117,9 @@ extension String {
      - Returns: The cardholder's name as a string.
      */
     var parseName: String? {
+        guard naturalLanguageCompanyNameParser == nil else {
+            return nil
+        }
         let ignoredWords: IgnoredWords? = Self.loadJson(filename: "ignoredWords")
         
         let wordsToAvoid = CardType.names + (ignoredWords?.words ?? [])
@@ -145,6 +148,34 @@ extension String {
         
         let options: NLTagger.Options = [.omitPunctuation, .omitWhitespace, .omitOther, .joinNames]
         let tags: [NLTag] = [.personalName]
+        
+        tagger.enumerateTags(in: self.startIndex..<self.endIndex,
+                             unit: .word,
+                             scheme: .nameType,
+                             options: options) { tag, tokenRange in
+            if let tag = tag,
+               tags.contains(tag) {
+                currentName = String(self[tokenRange])
+            }
+            
+            return true
+        }
+        
+        return currentName
+    }
+    
+    /**
+     Uses Natural Language Processing (NLP) to extract a company name from text.
+          
+     - Returns: The detected name as a string, or `nil` if no name is detected.
+     */
+    var naturalLanguageCompanyNameParser: String? {
+        var currentName: String?
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = self
+        
+        let options: NLTagger.Options = [.omitPunctuation, .omitWhitespace, .omitOther, .joinNames]
+        let tags: [NLTag] = [.placeName, .organizationName]
         
         tagger.enumerateTags(in: self.startIndex..<self.endIndex,
                              unit: .word,

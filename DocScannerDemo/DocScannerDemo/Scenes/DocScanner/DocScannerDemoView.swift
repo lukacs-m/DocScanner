@@ -10,18 +10,20 @@ import SwiftUI
 
 struct DocScannerDemoView: View {
     @StateObject private var viewModel = DocScannerDemoViewModel()
-
+    
     var body: some View {
         ZStack(alignment: .bottom) {
-            scannedContent
-            scanActionButtons
-        }
-        .sheet(isPresented: $viewModel.showScanner) {
-            DocScanner(with: viewModel.interpretor,
-                       scanResult: $viewModel.scanResponse,
-                       resultStream: viewModel.scanResponsePublisher) { results in
-                viewModel.callbackResults(results: results)
-            }.edgesIgnoringSafeArea(.all)
+            if viewModel.showScanner {
+                DocScanner(with: viewModel.interpretor,
+                           shouldDismiss: $viewModel.showScanner,
+                           scanResult: $viewModel.scanResponse,
+                           resultStream: viewModel.scanResponsePublisher) { results in
+                    viewModel.callbackResults(results: results)
+                }
+            } else {
+                scannedContent
+                scanActionButtons
+            }
         }
     }
 }
