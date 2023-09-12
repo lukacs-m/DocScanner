@@ -25,10 +25,11 @@ let package = Package(
             dependencies: [],
             resources: [
                 .process("Resources/ignoredWords.json")
-            ],
-            swiftSettings: [
-                SwiftSetting.unsafeFlags(["-Xfrontend", "-strict-concurrency=complete"])
-            ]),
+            ]
+//            ,swiftSettings: [
+//                SwiftSetting.unsafeFlags(["-Xfrontend", "-strict-concurrency=complete"])
+//            ]
+        ),
         .testTarget(
             name: "DocScannerTests",
             dependencies: ["DocScanner"]),
