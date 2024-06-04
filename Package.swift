@@ -3,6 +3,16 @@
 
 import PackageDescription
 
+let swiftSettings: [SwiftSetting] = [
+    .enableUpcomingFeature("BareSlashRegexLiterals"),
+    .enableUpcomingFeature("ConciseMagicFile"),
+    .enableUpcomingFeature("ExistentialAny"),
+    .enableUpcomingFeature("ForwardTrailingClosures"),
+    .enableUpcomingFeature("ImplicitOpenExistentials"),
+    .enableUpcomingFeature("StrictConcurrency"),
+    .unsafeFlags(["-warn-concurrency", "-enable-actor-data-race-checks"])
+]
+
 let package = Package(
     name: "DocScanner",
     platforms: [
@@ -25,7 +35,8 @@ let package = Package(
             dependencies: [],
             resources: [
                 .process("Resources/ignoredWords.json")
-            ]
+            ],
+            swiftSettings: swiftSettings
 //            ,swiftSettings: [
 //                SwiftSetting.unsafeFlags(["-Xfrontend", "-strict-concurrency=complete"])
 //            ]

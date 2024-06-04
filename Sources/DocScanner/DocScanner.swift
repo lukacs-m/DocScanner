@@ -7,12 +7,11 @@ import VisionKit
  The `DocScanner` is a tool facilitating document scanning using the device's camera and handling the scanned document results.
  */
 public struct DocScanner: UIViewControllerRepresentable {
-    private let interpreter: ScanInterpreting?
-    private let completionHandler: (Result<ScanResult?, Error>) -> Void
-    private let resultStream: PassthroughSubject<ScanResult?, Error>?
-    @Binding private var scanResult: ScanResult?
+    private let interpreter: (any ScanInterpreting)?
+    private let completionHandler: (Result<(any ScanResult)?, (any Error)>) -> Void
+    private let resultStream: PassthroughSubject<(any ScanResult)?, any Error>?
+    @Binding private var scanResult: (any ScanResult)?
     @Binding private var shouldDismiss: Bool
-
     public typealias UIViewControllerType = VNDocumentCameraViewController
     
     @MainActor
@@ -29,11 +28,11 @@ public struct DocScanner: UIViewControllerRepresentable {
         - resultStream: An optional result stream for observing scan responses.
         - completion: A closure to handle the completion of scanning.
     */
-    public init(with interpreter: ScanInterpreting? = nil,
+    public init(with interpreter: (any ScanInterpreting)? = nil,
                 shouldDismiss: Binding<Bool> = Binding.constant(false),
-                scanResult: Binding<ScanResult?> = Binding.constant(nil),
-                resultStream: PassthroughSubject<ScanResult?, Error>? = nil,
-                completion: @escaping (Result<ScanResult?, Error>) -> Void = { _ in }) {
+                scanResult: Binding<(any ScanResult)?> = Binding.constant(nil),
+                resultStream: PassthroughSubject<(any ScanResult)?, any Error>? = nil,
+                completion: @escaping (Result<(any ScanResult)?, any Error>) -> Void = { _ in }) {
         self.completionHandler = completion
         self._scanResult = scanResult
         self.resultStream = resultStream
@@ -57,9 +56,9 @@ public struct DocScanner: UIViewControllerRepresentable {
   
     public final class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate, @unchecked Sendable {
         private let docScanner: DocScanner
-        private let interpreter: ScanInterpreting?
-        
-        init(_ docScanner: DocScanner, and interpreter: ScanInterpreting? = nil) {
+        private let interpreter: (any ScanInterpreting)?
+
+        init(_ docScanner: DocScanner, and interpreter: (any ScanInterpreting)? = nil) {
             self.docScanner = docScanner
             self.interpreter = interpreter
         }
@@ -102,7 +101,7 @@ public struct DocScanner: UIViewControllerRepresentable {
             - error: The error that occurred during scanning.
          */
         public func documentCameraViewController(_ controller: VNDocumentCameraViewController,
-                                                 didFailWithError error: Error) {
+                                                 didFailWithError error: any Error) {
             Task { @MainActor [weak self] in
                 self?.docScanner.completionHandler(.failure(error))
                 self?.docScanner.scanResult = nil
@@ -117,7 +116,7 @@ public struct DocScanner: UIViewControllerRepresentable {
             
             - Parameter result: The interpreted scan response.
         */
-        private func respond(with result: ScanResult?, controller: VNDocumentCameraViewController) {
+        private func respond(with result: (any ScanResult)?, controller: VNDocumentCameraViewController) {
             Task { @MainActor [weak self] in
                 self?.docScanner.completionHandler(.success(result))
                 self?.docScanner.scanResult = result

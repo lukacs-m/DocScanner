@@ -12,8 +12,11 @@ import Combine
 final class DataScannerDemoViewModel: ObservableObject {
     @Published var scanResponse: ScanResult?
     @Published var showScanner = false
+    @Published var scanning = false
     @Published var applyRegionOfInterest = false
-    
+    @Published var automaticDismiss = true
+    @Published var regionOfInterest: CGRect?
+
     let scanResponsePublisher: PassthroughSubject<ScanResult?, Error> = .init()
     private(set) var scanType: DataScannerConfiguration = .default
     private var cancellable = Set<AnyCancellable>()
@@ -39,10 +42,17 @@ final class DataScannerDemoViewModel: ObservableObject {
     
     func startScan(for type: DataScannerConfiguration) {
         scanType = type
+        reset()
         showScanner.toggle()
     }
     
     func callbackResults(results: Result<ScanResult?, Error>) {
         print("Callback scan results: \(results)")
+    }
+
+    func reset() {
+        scanning = false
+        scanResponse = nil
+        scanResponsePublisher.send(nil)
     }
 }

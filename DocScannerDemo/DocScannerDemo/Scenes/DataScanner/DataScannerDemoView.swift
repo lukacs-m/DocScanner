@@ -11,8 +11,8 @@ import SwiftUI
 struct DataScannerDemoView: View {
     @StateObject private var viewModel = DataScannerDemoViewModel()
     @State private var showDeviceNotCapacityAlert = false
-    @State private var regionOfInterest: CGRect?
-    
+    @State private var show = false
+
     var body: some View {
         VStack {
             scannedContent
@@ -24,14 +24,26 @@ struct DataScannerDemoView: View {
                 Spacer()
             }
             .frame(width: 400)
-            
+
+            HStack {
+                Spacer()
+                Toggle("Automatically dismiss scanner when scan finished", isOn: $viewModel.automaticDismiss)
+                Spacer()
+            }
+            .frame(width: 400)
+
             scanActionButtons
         }
         .fullScreenCover(isPresented: $viewModel.showScanner) {
-            ZStack {
+            ZStack(alignment: .bottom) {
                 DataScanner(with: viewModel.scanType,
-                            startScanning:  $viewModel.showScanner,
-                            regionOfInterest: $regionOfInterest,
+                            startScanning: $viewModel.scanning,
+                            shouldDismiss:  Binding(
+                                get: { !viewModel.showScanner},
+                                set: { viewModel.showScanner = !$0 }
+                            ),
+                            automaticDismiss: viewModel.automaticDismiss,
+                            regionOfInterest: $viewModel.regionOfInterest,
                             scanResult: $viewModel.scanResponse,
                             resultStream: viewModel.scanResponsePublisher) { results in
                     viewModel.callbackResults(results: results)
@@ -39,21 +51,44 @@ struct DataScannerDemoView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .overlay(regionOfInterestOverlay)
                 VStack {
-                    Spacer()
-                    Button {viewModel.showScanner.toggle()} label: {
-                        Text( "Dismiss")
-                    }
-                    .padding()
-                    .background(.white.opacity(0.5))
-                    
+                    VStack {
+                        Text("Content of scan:")
+                        if !viewModel.automaticDismiss {
+                            if viewModel.scanResponse == nil {
+                                emptyRow
+                            } else if let cardDetails = viewModel.scanResponse as? CardDetails {
+                                Text(cardDetails.name ?? "")
+                            } else if let barcode = viewModel.scanResponse as? Barcode {
+                                Text(barcode.payload)
+                            } else if let data = viewModel.scanResponse as? GenericData {
+                                Text(data.scannedData.first ?? "")
+                            }
+                        }
+                    }.padding()
+                        .frame(height: 100)
+                        .background(.gray.opacity(0.5))
+
+                    VStack{
+
+                        Button {viewModel.scanning.toggle()} label: {
+                            Text( viewModel.scanning ? "Stop scanning" :  "Start Scanning")
+                        }
+                        .padding()
+
+                        Button {viewModel.showScanner.toggle()} label: {
+                            Text( "Dismiss")
+                        }
+                        .padding()
+                    } .background(.gray.opacity(0.5))
                 }
+
                 .offset(y: -25)
             }
         }
         .alert("Scanner Unavailable", isPresented: $showDeviceNotCapacityAlert, actions: {})
         .onChange(of: viewModel.applyRegionOfInterest) { value in
             if !value {
-                regionOfInterest = nil
+                viewModel.regionOfInterest = nil
             }
         }
     }
@@ -61,7 +96,7 @@ struct DataScannerDemoView: View {
     @ViewBuilder
     var regionOfInterestOverlay: some View {
         if viewModel.applyRegionOfInterest {
-            RestrictedScanningArea(regionOfInterest: $regionOfInterest)
+            RestrictedScanningArea(regionOfInterest: $viewModel.regionOfInterest)
         } else {
            EmptyView()
         }
@@ -85,7 +120,7 @@ private extension DataScannerDemoView {
 
 private extension DataScannerDemoView {
     func barcodeRow(for barcode: Barcode) -> some View {
-        VStack {
+        VStack(spacing: 20) {
             Spacer()
             Text("Barcode or QR code payload:")
                 .font(.title)

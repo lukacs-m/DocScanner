@@ -72,10 +72,11 @@ public struct DataScannerConfiguration {
 public struct DataScanner: UIViewControllerRepresentable {
     @Binding private var startScanning: Bool
     @Binding private var regionOfInterest: CGRect?
-    @Binding private var scanResult: ScanResult?
+    @Binding private var scanResult: (any ScanResult)?
     @Binding private var shouldDismiss: Bool
-    private let completionHandler: (Result<ScanResult?, Error>) -> Void
-    private let resultStream: PassthroughSubject<ScanResult?, Error>?
+    private var automaticDismiss: Bool
+    private let completionHandler: (Result<(any ScanResult)?, any Error>) -> Void
+    private let resultStream: PassthroughSubject<(any ScanResult)?, any Error>?
   
     let configuration: DataScannerConfiguration
     
@@ -89,10 +90,11 @@ public struct DataScanner: UIViewControllerRepresentable {
     public init(with configuration: DataScannerConfiguration,
                 startScanning: Binding<Bool>,
                 shouldDismiss: Binding<Bool> = Binding.constant(false),
+                automaticDismiss: Bool = true,
                 regionOfInterest: Binding<CGRect?> = Binding.constant(nil),
-                scanResult: Binding<ScanResult?> = Binding.constant(nil),
-                resultStream: PassthroughSubject<ScanResult?, Error>? = nil,
-                completion: @escaping (Result<ScanResult?, Error>) -> Void = { _ in }) {
+                scanResult: Binding<(any ScanResult)?> = Binding.constant(nil),
+                resultStream: PassthroughSubject<(any ScanResult)?, any Error>? = nil,
+                completion: @escaping (Result<(any ScanResult)?, any Error>) -> Void = { _ in }) {
         self.configuration = configuration
         self._startScanning = startScanning
         self._regionOfInterest = regionOfInterest
@@ -100,6 +102,7 @@ public struct DataScanner: UIViewControllerRepresentable {
         self.completionHandler = completion
         self.resultStream = resultStream
         self._shouldDismiss = shouldDismiss
+        self.automaticDismiss = automaticDismiss
     }
     
     public func makeUIViewController(context: UIViewControllerRepresentableContext<DataScanner>) -> DataScannerViewController {
@@ -117,12 +120,15 @@ public struct DataScanner: UIViewControllerRepresentable {
     
     public func updateUIViewController(_ uiViewController: DataScannerViewController,
                                        context: UIViewControllerRepresentableContext<DataScanner>) {
+        if shouldDismiss {
+            uiViewController.stopScanning()
+            uiViewController.dismiss(animated: true)
+        }
+
         if startScanning, !uiViewController.isScanning {
             try? uiViewController.startScanning()
         } else if !startScanning, uiViewController.isScanning {
             uiViewController.stopScanning()
-            uiViewController.dismiss(animated: true)
-            shouldDismiss = true
         }
         addScanningRegionOfInterest(controller: uiViewController)
     }
@@ -263,18 +269,19 @@ public struct DataScanner: UIViewControllerRepresentable {
          
          - Parameter result: The interpreted scan response.
          */
-        private func respond(with result: ScanResult) {
+        private func respond(with result: any ScanResult) {
             dataScannerView.completionHandler(.success(result))
             dataScannerView.scanResult = result
             dataScannerView.resultStream?.send(result)
         }
         
-        private func stopScanAndDismiss(shouldDismiss: Bool = true) {
-            viewController?.stopScanning()
-            if shouldDismiss {
-                dataScannerView.shouldDismiss = true
-                viewController?.dismiss(animated: true)
+        private func stopScanAndDismiss() {
+            guard dataScannerView.automaticDismiss else {
+                return
             }
+            viewController?.stopScanning()
+            viewController?.dismiss(animated: true)
+            dataScannerView.shouldDismiss = true
         }
     }
 }
