@@ -72,7 +72,7 @@ public struct DocScanner: UIViewControllerRepresentable {
          */
         public func documentCameraViewController(_ controller: VNDocumentCameraViewController,
                                                  didFinishWith scan: VNDocumentCameraScan) {
-            guard let interpreter else {
+            guard let interpreter = interpreter as? (any DocScanInterpreting) else {
                 respond(with: scan, controller: controller)
                 return
             }

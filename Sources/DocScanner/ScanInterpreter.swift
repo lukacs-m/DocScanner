@@ -14,17 +14,38 @@ import VisionKit
  It utilizes the Vision and VisionKit frameworks to extract text from scanned images and interprets the text to construct a `ScanResponse`.
  */
 public actor ScanInterpreter: ScanInterpreting {
+
     private let type: DocScanType
     
     public init(type: DocScanType = .document) {
         self.type = type
     }
     
+
+
     /**
      Parses and interprets scanned document pages.
      
-     - Parameter scans: A `VNDocumentCameraScan` object containing scanned document pages.
-     
+     - Parameter data: Any object containing scanned document pages.
+
+     - Returns: A `ScanResponse` that represents the interpretation of the scanned document.
+     */
+    public func parseAndInterpret(data: Any) async -> any ScanResult {
+        if let scans = data as? VNDocumentCameraScan {
+           return await parseAndInterpret(scans: scans)
+        } else if let results = data as? [String] {
+            return parseCardResults(for: results, and: nil)
+        }
+        return GenericData(scannedData: [])
+    }
+}
+
+extension ScanInterpreter: DocScanInterpreting {
+    /**
+     Parses and interprets scanned document pages.
+
+     - Parameter scans: A `Any` object containing scanned document pages.
+
      - Returns: A `ScanResponse` that represents the interpretation of the scanned document.
      */
     public func parseAndInterpret(scans: VNDocumentCameraScan) async -> any ScanResult {
@@ -36,6 +57,7 @@ public actor ScanInterpreter: ScanInterpreting {
         }
     }
 }
+
 
 // MARK: - Documents
 private extension ScanInterpreter {
@@ -67,10 +89,12 @@ private extension ScanInterpreter {
          guard let text = extractText(image: image) else {
              return CardDetails.empty
          }
-         return ScanInterpreter.parseCardResults(for: text, and: image)
+         return parseCardResults(for: text, and: image)
      }
-    
-    static func parseCardResults(for recognizedText: [String], and image: UIImage?) -> any ScanResult {
+}
+
+extension ScanInterpreter: CardInterpreting {
+    public func parseCardResults(for recognizedText: [String], and image: UIImage?) -> any ScanResult {
         var expiryDate: String?
         var name: String?
         var creditCardNumber: String?
@@ -82,16 +106,16 @@ private extension ScanInterpreter {
             if let expiryDateString = text.parseExpiryDate {
                 expiryDate = expiryDateString
             }
-            
+
             if let parsedName = text.parseName {
                 name = parsedName
             }
-            
+
             if let parsedCVV = text.parseCVV(cardNumber: creditCardNumber) {
                 cvv = parsedCVV
             }
         }
-        
+
         return CardDetails(image: image,
                            numberWithDelimiters: creditCardNumber,
                            name: name,

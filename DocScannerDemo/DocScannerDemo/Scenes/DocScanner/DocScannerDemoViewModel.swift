@@ -9,11 +9,12 @@ import Foundation
 import DocScanner
 import Combine
 
+@MainActor
 final class DocScannerDemoViewModel: ObservableObject {
     @Published var scanResponse: ScanResult?
-    private var scanType: DocScanType = .document
     @Published var showScanner = false
     let scanResponsePublisher: PassthroughSubject<ScanResult?, Error> = .init()
+    private var scanType: DocScanType = .document
     private var cancellable = Set<AnyCancellable>()
     private var task: Task<Void, Never>?
     

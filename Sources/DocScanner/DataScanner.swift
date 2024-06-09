@@ -52,7 +52,7 @@ public struct DataScannerConfiguration {
     
     public static var `card`: DataScannerConfiguration {
         DataScannerConfiguration(recognizedDataTypes: [.text()],
-                                 documentType: .card,
+                                 documentType: .card(ScanInterpreter()),
                                  qualityLevel: .accurate,
                                  recognizesMultipleItems: true,
                                  isGuidanceEnabled: false,
@@ -142,7 +142,9 @@ public struct DataScanner: UIViewControllerRepresentable {
               regionOfInterest != controller.regionOfInterest else {
             return
         }
-        controller.regionOfInterest = regionOfInterest
+        DispatchQueue.main.async {
+            controller.regionOfInterest = regionOfInterest
+        }
     }
     
     @MainActor
@@ -187,12 +189,14 @@ public struct DataScanner: UIViewControllerRepresentable {
                                 didAdd addedItems: [RecognizedItem],
                                 allItems: [RecognizedItem]) {
             switch dataScannerView.configuration.documentType {
-            case .card:
-                scanCard(items: addedItems)
+            case let .card(interpreter):
+                scanCard(items: addedItems, interpreter: interpreter)
             case .data:
                 scanData(items: addedItems)
             case .barcode:
                 scanBarcode(items: addedItems)
+            case let .custom(interpreter):
+                scanCustom(items: addedItems, interpreter: interpreter)
             }
         }
         
@@ -224,14 +228,15 @@ public struct DataScanner: UIViewControllerRepresentable {
             }
         }
    
-        private func scanCard(items: [RecognizedItem]) {
+        private func scanCard(items: [RecognizedItem], interpreter: any ScanInterpreting) {
             let parsedText = items.filter { $0.isText }.compactMap(\.value)
-            guard !parsedText.isEmpty else {
+            guard !parsedText.isEmpty,
+                  let interpreter = interpreter as? (any CardInterpreting) else {
                 return
             }
             
             Task { [weak self] in
-                let response = ScanInterpreter.parseCardResults(for: parsedText, and: nil)
+                let response = await interpreter.parseCardResults(for: parsedText, and: nil)
                 guard let card = response as? CardDetails,
                       let number = card.number,
                       !number.isEmpty else {
@@ -263,7 +268,20 @@ public struct DataScanner: UIViewControllerRepresentable {
             respond(with: barcode)
             stopScanAndDismiss()
         }
-        
+
+        private func scanCustom(items: [RecognizedItem], interpreter: any ScanInterpreting) {
+            let parsedData = items.compactMap(\.value)
+            guard !parsedData.isEmpty else {
+                return
+            }
+
+            Task { [weak self] in
+                let response = await interpreter.parseAndInterpret(data: parsedData)
+
+                self?.respond(with: response)
+            }
+        }
+
         /**
          Sends the interpreted scan response to the provided result stream and completion handler.
          

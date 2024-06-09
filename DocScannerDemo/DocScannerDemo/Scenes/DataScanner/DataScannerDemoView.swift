@@ -17,7 +17,7 @@ struct DataScannerDemoView: View {
         VStack {
             scannedContent
                 .padding()
-            
+
             HStack {
                 Spacer()
                 Toggle("Apply scanning field restriction", isOn: $viewModel.applyRegionOfInterest)
@@ -51,25 +51,26 @@ struct DataScannerDemoView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .overlay(regionOfInterestOverlay)
                 VStack {
-                    VStack {
-                        Text("Content of scan:")
-                        if !viewModel.automaticDismiss {
-                            if viewModel.scanResponse == nil {
-                                emptyRow
-                            } else if let cardDetails = viewModel.scanResponse as? CardDetails {
-                                Text(cardDetails.name ?? "")
-                            } else if let barcode = viewModel.scanResponse as? Barcode {
-                                Text(barcode.payload)
-                            } else if let data = viewModel.scanResponse as? GenericData {
-                                Text(data.scannedData.first ?? "")
+                    if !viewModel.automaticDismiss {
+                        VStack {
+                            Text("Content of scan:")
+                            if !viewModel.automaticDismiss {
+                                if viewModel.scanResponse == nil {
+                                    emptyRow
+                                } else if let cardDetails = viewModel.scanResponse as? CardDetails {
+                                    Text("Name of card owner: \(cardDetails.name ?? "Unknown")")
+                                    Text("Card number: \(cardDetails.number ?? "Unknown")")
+                                } else if let barcode = viewModel.scanResponse as? Barcode {
+                                    Text(barcode.payload)
+                                } else if let data = viewModel.scanResponse as? GenericData {
+                                    Text(data.scannedData.first ?? "")
+                                }
                             }
-                        }
-                    }.padding()
-                        .frame(height: 100)
-                        .background(.gray.opacity(0.5))
-
+                        }.padding()
+                            .frame(height: 100)
+                            .background(.gray.opacity(0.5))
+                    }
                     VStack{
-
                         Button {viewModel.scanning.toggle()} label: {
                             Text( viewModel.scanning ? "Stop scanning" :  "Start Scanning")
                         }
@@ -79,9 +80,10 @@ struct DataScannerDemoView: View {
                             Text( "Dismiss")
                         }
                         .padding()
-                    } .background(.gray.opacity(0.5))
+                    } 
+                    .background(.gray.opacity(0.5))
+                    .cornerRadius(5)
                 }
-
                 .offset(y: -25)
             }
         }
@@ -92,13 +94,11 @@ struct DataScannerDemoView: View {
             }
         }
     }
-    
+
     @ViewBuilder
     var regionOfInterestOverlay: some View {
         if viewModel.applyRegionOfInterest {
             RestrictedScanningArea(regionOfInterest: $viewModel.regionOfInterest)
-        } else {
-           EmptyView()
         }
     }
 }
@@ -141,7 +141,7 @@ private extension DataScannerDemoView {
                     Text(payload)
                 }
                 Spacer()
-                
+
             }
         }
     }
@@ -153,7 +153,7 @@ private extension DataScannerDemoView {
             Button {
                 if viewModel.isScanningPossible {
                     viewModel.startScan(for: .default)
-                    
+
                 } else {
                     showDeviceNotCapacityAlert = true
                 }
@@ -161,10 +161,10 @@ private extension DataScannerDemoView {
                 Text("Scan Data")
             }
             .padding()
-            
+
             Divider()
                 .frame(height: 15)
-            
+
             Button {
                 if viewModel.isScanningPossible {
                     viewModel.startScan(for: .card)
@@ -175,10 +175,10 @@ private extension DataScannerDemoView {
                 Text("Scan Card")
             }
             .padding()
-            
+
             Divider()
                 .frame(height: 15)
-            
+
             Button {
                 if viewModel.isScanningPossible {
                     viewModel.startScan(for: .barcode)

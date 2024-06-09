@@ -8,5 +8,15 @@
 public enum DataScanType: Sendable {
     case data
     case barcode
-    case card
+    case card(any ScanInterpreting)
+    case custom(any ScanInterpreting)
+
+  public var scanInterpreter: (any ScanInterpreting)? {
+        switch self {
+        case let .card(interpreter), let .custom(interpreter):
+            return interpreter
+        default:
+            return nil
+        }
+    }
 }

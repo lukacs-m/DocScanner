@@ -55,7 +55,9 @@ public struct RestrictedScanningArea: View {
                 .overlay(border)
                 .background(
                     GeometryReader { geometry -> Color in
-                        regionOfInterest = geometry.frame(in: .global)
+                        DispatchQueue.main.async {
+                            regionOfInterest = geometry.frame(in: .global)
+                        }
                         return Color.clear
                     })
         }
@@ -67,8 +69,6 @@ public struct RestrictedScanningArea: View {
         if configuration.border {
             RoundedRectangle(cornerRadius: configuration.borderCornerRadius)
                 .stroke(configuration.borderColor, lineWidth: configuration.borderColorWidth)
-        } else {
-            EmptyView()
         }
     }
 }

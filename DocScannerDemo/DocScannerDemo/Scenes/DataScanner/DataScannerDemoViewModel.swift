@@ -9,6 +9,7 @@ import Foundation
 import DocScanner
 import Combine
 
+@MainActor
 final class DataScannerDemoViewModel: ObservableObject {
     @Published var scanResponse: ScanResult?
     @Published var showScanner = false
