@@ -5,6 +5,7 @@
 //  Created by Martin Lukacs on 24/08/2023.
 //
 
+#if canImport(UIKit)
 import Foundation
 import UIKit
 
@@ -131,3 +132,4 @@ public enum CardIndustry: String, CaseIterable, Identifiable, Sendable {
 
     public var id: Int { hashValue }
 }
+#endif

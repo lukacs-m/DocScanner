@@ -1,22 +1,23 @@
-// swift-tools-version: 5.8
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
-    .enableUpcomingFeature("BareSlashRegexLiterals"),
-    .enableUpcomingFeature("ConciseMagicFile"),
-    .enableUpcomingFeature("ExistentialAny"),
-    .enableUpcomingFeature("ForwardTrailingClosures"),
-    .enableUpcomingFeature("ImplicitOpenExistentials"),
-    .enableUpcomingFeature("StrictConcurrency"),
-    .unsafeFlags(["-warn-concurrency", "-enable-actor-data-race-checks"])
+//    .enableUpcomingFeature("BareSlashRegexLiterals"),
+//    .enableUpcomingFeature("ConciseMagicFile"),
+//    .enableUpcomingFeature("ExistentialAny"),
+//    .enableUpcomingFeature("ForwardTrailingClosures"),
+//    .enableUpcomingFeature("ImplicitOpenExistentials"),
+//    .enableUpcomingFeature("StrictConcurrency"),
+//    .unsafeFlags(["-warn-concurrency", "-enable-actor-data-race-checks"])
 ]
 
 let package = Package(
     name: "DocScanner",
     platforms: [
-        .iOS(.v15)
+        .iOS(.v15),
+        .macOS(.v13)
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.

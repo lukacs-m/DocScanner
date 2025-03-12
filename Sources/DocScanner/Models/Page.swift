@@ -5,6 +5,7 @@
 //  Created by Martin Lukacs on 24/08/2023.
 //
 
+#if canImport(UIKit)
 import Foundation
 import UIKit
 
@@ -23,3 +24,4 @@ public struct Page: Identifiable, Hashable, Sendable {
         self.text = text
     }
 }
+#endif
