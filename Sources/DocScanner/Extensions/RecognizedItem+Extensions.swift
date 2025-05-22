@@ -10,7 +10,7 @@ import VisionKit
 
 @available(iOS 16.0, *)
 @available(macCatalyst, unavailable)
-extension RecognizedItem: Equatable {
+extension RecognizedItem: @retroactive Equatable {
     public static func == (lhs: RecognizedItem, rhs: RecognizedItem) -> Bool {
         lhs.id == rhs.id
     }

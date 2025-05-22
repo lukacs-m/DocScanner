@@ -18,7 +18,7 @@ final class DataScannerDemoViewModel: ObservableObject {
     @Published var automaticDismiss = true
     @Published var regionOfInterest: CGRect?
 
-    let scanResponsePublisher: PassthroughSubject<ScanResult?, Error> = .init()
+    let scanResponsePublisher: PassthroughSubject<Result<ScanResult, Error>, Never> = .init()
     private(set) var scanType: DataScannerConfiguration = .default
     private var cancellable = Set<AnyCancellable>()
     
@@ -30,7 +30,7 @@ final class DataScannerDemoViewModel: ObservableObject {
     init() {
        scanResponsePublisher
             .receive(on: DispatchQueue.main)
-            .sink { _ in } receiveValue: { scanResult in
+            .sink { scanResult in
                 print("Publisher scan results: \(String(describing: scanResult))")
             }.store(in: &cancellable)
         
@@ -54,6 +54,5 @@ final class DataScannerDemoViewModel: ObservableObject {
     func reset() {
         scanning = false
         scanResponse = nil
-        scanResponsePublisher.send(nil)
     }
 }

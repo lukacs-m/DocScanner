@@ -9,7 +9,7 @@ import VisionKit
 public struct DocScanner: UIViewControllerRepresentable {
     private let interpreter: (any ScanInterpreting)?
     private let completionHandler: (Result<(any ScanResult)?, (any Error)>) -> Void
-    private let resultStream: PassthroughSubject<(any ScanResult)?, any Error>?
+    private let resultStream: PassthroughSubject<Result<(any ScanResult)?, (any Error)>, Never>?
     @Binding private var scanResult: (any ScanResult)?
     @Binding private var shouldDismiss: Bool
     public typealias UIViewControllerType = VNDocumentCameraViewController
@@ -31,7 +31,7 @@ public struct DocScanner: UIViewControllerRepresentable {
     public init(with interpreter: (any ScanInterpreting)? = nil,
                 shouldDismiss: Binding<Bool> = Binding.constant(false),
                 scanResult: Binding<(any ScanResult)?> = Binding.constant(nil),
-                resultStream: PassthroughSubject<(any ScanResult)?, any Error>? = nil,
+                resultStream: PassthroughSubject<Result<(any ScanResult)?, (any Error)>, Never>? = nil,
                 completion: @escaping (Result<(any ScanResult)?, any Error>) -> Void = { _ in }) {
         self.completionHandler = completion
         self._scanResult = scanResult
@@ -105,7 +105,7 @@ public struct DocScanner: UIViewControllerRepresentable {
             Task { @MainActor [weak self] in
                 self?.docScanner.completionHandler(.failure(error))
                 self?.docScanner.scanResult = nil
-                self?.docScanner.resultStream?.send(completion: .failure(error))
+                self?.docScanner.resultStream?.send(.failure(error))
                 self?.docScanner.shouldDismiss.toggle()
                 controller.dismiss(animated: true)
             }
@@ -120,7 +120,7 @@ public struct DocScanner: UIViewControllerRepresentable {
             Task { @MainActor [weak self] in
                 self?.docScanner.completionHandler(.success(result))
                 self?.docScanner.scanResult = result
-                self?.docScanner.resultStream?.send(result)
+                self?.docScanner.resultStream?.send(.success(result))
                 self?.docScanner.shouldDismiss.toggle()
                 controller.dismiss(animated: true)
             }

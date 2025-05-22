@@ -13,7 +13,7 @@ import Combine
 final class DocScannerDemoViewModel: ObservableObject {
     @Published var scanResponse: ScanResult?
     @Published var showScanner = false
-    let scanResponsePublisher: PassthroughSubject<ScanResult?, Error> = .init()
+    let scanResponsePublisher: PassthroughSubject<Result<ScanResult?, Error>, Never> = .init()
     private var scanType: DocScanType = .document
     private var cancellable = Set<AnyCancellable>()
     private var task: Task<Void, Never>?
@@ -21,20 +21,13 @@ final class DocScannerDemoViewModel: ObservableObject {
     init() {
        scanResponsePublisher
             .receive(on: DispatchQueue.main)
-            .sink { completion in
-                switch completion {
-                case .finished:
-                    print("Finished")
-                case .failure(let error):
-                    print("Publisher error \(error)")
-                }
-            } receiveValue: { scanResult in
+            .sink { scanResult in
                 print("Publisher scan results: \(String(describing: scanResult))")
             }.store(in: &cancellable)
         
         $scanResponse
             .receive(on: DispatchQueue.main)
-            .sink {  scanResult in
+            .sink { scanResult in
                 print("@Published scan results: \(String(describing: scanResult))")
             }.store(in: &cancellable)
         
@@ -63,16 +56,12 @@ final class DocScannerDemoViewModel: ObservableObject {
         task?.cancel()
 
         task = Task { [scanResponsePublisher] in
-            do {
-                for try await scanResult in scanResponsePublisher.values {
-                    print("asyncSequenceResults: \(String(describing: scanResult))")
-                    if Task.isCancelled {
-                        print("asyncSequenceResults cancelled")
-
-                    }
+            for await scanResult in scanResponsePublisher.values {
+                print("asyncSequenceResults: \(String(describing: scanResult))")
+                if Task.isCancelled {
+                    print("asyncSequenceResults cancelled")
+                    
                 }
-            } catch {
-                print("AsyncSequenceResults error \(error)")
             }
         }
     }

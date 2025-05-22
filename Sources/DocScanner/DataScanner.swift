@@ -76,7 +76,7 @@ public struct DataScanner: UIViewControllerRepresentable {
     @Binding private var shouldDismiss: Bool
     private var automaticDismiss: Bool
     private let completionHandler: (Result<(any ScanResult)?, any Error>) -> Void
-    private let resultStream: PassthroughSubject<(any ScanResult)?, any Error>?
+    private let resultStream: PassthroughSubject<Result<(any ScanResult), any Error>, Never>?
   
     let configuration: DataScannerConfiguration
     
@@ -93,7 +93,7 @@ public struct DataScanner: UIViewControllerRepresentable {
                 automaticDismiss: Bool = true,
                 regionOfInterest: Binding<CGRect?> = Binding.constant(nil),
                 scanResult: Binding<(any ScanResult)?> = Binding.constant(nil),
-                resultStream: PassthroughSubject<(any ScanResult)?, any Error>? = nil,
+                resultStream: PassthroughSubject<Result<(any ScanResult), any Error>, Never>? = nil,
                 completion: @escaping (Result<(any ScanResult)?, any Error>) -> Void = { _ in }) {
         self.configuration = configuration
         self._startScanning = startScanning
@@ -208,7 +208,7 @@ public struct DataScanner: UIViewControllerRepresentable {
                                 becameUnavailableWithError error: DataScannerViewController.ScanningUnavailable) {
             dataScannerView.completionHandler(.failure(error))
             dataScannerView.scanResult = nil
-            dataScannerView.resultStream?.send(nil)
+            dataScannerView.resultStream?.send(.failure(error))
             stopScanAndDismiss()
         }
         
@@ -290,7 +290,7 @@ public struct DataScanner: UIViewControllerRepresentable {
         private func respond(with result: any ScanResult) {
             dataScannerView.completionHandler(.success(result))
             dataScannerView.scanResult = result
-            dataScannerView.resultStream?.send(result)
+            dataScannerView.resultStream?.send(.success(result))
         }
         
         private func stopScanAndDismiss() {
