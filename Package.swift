@@ -1,16 +1,18 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.3.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
+    .enableExperimentalFeature("StrictConcurrency"),
+    .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+    .enableUpcomingFeature("InferIsolatedConformances")
 ]
 
 let package = Package(
     name: "DocScanner",
     platforms: [
-        .iOS(.v15),
-        .macOS(.v13)
+        .iOS(.v18)
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
@@ -35,5 +37,6 @@ let package = Package(
         .testTarget(
             name: "DocScannerTests",
             dependencies: ["DocScanner"]),
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )

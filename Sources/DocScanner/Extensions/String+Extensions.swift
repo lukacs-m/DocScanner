@@ -7,13 +7,10 @@
 
 import Foundation
 import NaturalLanguage
+import OSLog
 import RegexBuilder
 
 extension String {
-    var isLowercase: Bool {
-        self == self.lowercased()
-    }
-    
     var isUppercase: Bool {
         self == self.uppercased()
     }
@@ -120,11 +117,8 @@ extension String {
         guard naturalLanguageCompanyNameParser == nil else {
             return nil
         }
-        let ignoredWords: IgnoredWords? = Self.loadJson(filename: "ignoredWords")
-        
-        let wordsToAvoid = CardType.names + (ignoredWords?.words ?? [])
-        
-        guard !self.lowercased().contains(wordsToAvoid),
+
+        guard !self.lowercased().contains(CardParsingResources.wordsToAvoid),
               !self.contains("\n"),
               self.isUppercase,
               self.rangeOfCharacter(from: .decimalDigits) == nil,
@@ -134,34 +128,6 @@ extension String {
         }
         
         return self
-    }
-    
-    /**
-     Uses Natural Language Processing (NLP) to extract a personal name from text.
-          
-     - Returns: The detected name as a string, or `nil` if no name is detected.
-     */
-    var naturalLanguageNameParser: String? {
-        var currentName: String?
-        let tagger = NLTagger(tagSchemes: [.nameType])
-        tagger.string = self
-        
-        let options: NLTagger.Options = [.omitPunctuation, .omitWhitespace, .omitOther, .joinNames]
-        let tags: [NLTag] = [.personalName]
-        
-        tagger.enumerateTags(in: self.startIndex..<self.endIndex,
-                             unit: .word,
-                             scheme: .nameType,
-                             options: options) { tag, tokenRange in
-            if let tag = tag,
-               tags.contains(tag) {
-                currentName = String(self[tokenRange])
-            }
-            
-            return true
-        }
-        
-        return currentName
     }
     
     /**
@@ -230,7 +196,7 @@ extension String {
                 let decoder = JSONDecoder()
                 return try decoder.decode(T.self, from: data)
             } catch {
-                print("error:\(error)")
+                Logger.docScanner.error("Failed to load \(fileName).json: \(error.localizedDescription)")
             }
         }
         return nil

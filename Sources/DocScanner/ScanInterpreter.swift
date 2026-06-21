@@ -5,112 +5,87 @@
 //  Created by Martin Lukacs on 24/08/2023.
 //
 
-import Foundation
+import UIKit
 import Vision
 import VisionKit
 
 /**
- The `ScanInterpreter` actor provides document interpretation functionality for scanned documents and cards.
- It utilizes the Vision and VisionKit frameworks to extract text from scanned images and interprets the text to construct a `ScanResponse`.
- */
-public actor ScanInterpreter: ScanInterpreting {
+ The `ScanInterpreter` interprets scanned documents and cards.
 
+ It is a `Sendable` value type holding only an immutable configuration, so it needs no actor
+ isolation. Heavy text recognition is pushed off the caller's executor via `@concurrent`,
+ using the modern Swift-native Vision API (`RecognizeTextRequest`).
+ */
+public struct ScanInterpreter: ScanInterpreting {
     private let type: DocScanType
-    
+
     public init(type: DocScanType = .document) {
         self.type = type
     }
-    
 
-
-    /**
-     Parses and interprets scanned document pages.
-     
-     - Parameter data: Any object containing scanned document pages.
-
-     - Returns: A `ScanResponse` that represents the interpretation of the scanned document.
-     */
-    public func parseAndInterpret(data: Any) async -> any ScanResult {
-        if let scans = data as? VNDocumentCameraScan {
-           return await parseAndInterpret(scans: scans)
-        } else if let results = data as? [String] {
-            return parseCardResults(for: results, and: nil)
-        }
-        return GenericData(scannedData: [])
-    }
-}
-
-extension ScanInterpreter: DocScanInterpreting {
-    /**
-     Parses and interprets scanned document pages.
-
-     - Parameter scans: A `Any` object containing scanned document pages.
-
-     - Returns: A `ScanResponse` that represents the interpretation of the scanned document.
-     */
-    public func parseAndInterpret(scans: VNDocumentCameraScan) async -> any ScanResult {
+    public func interpret(scan: VNDocumentCameraScan) async throws(ScanInterpreterError) -> any ScanResult {
         switch type {
         case .card:
-            return parseCard(scan: scans)
-        default:
-            return parseDocument(scans: scans)
+            return try await parseCard(scan: scan)
+        case .document:
+            return try await parseDocument(scan: scan)
         }
+    }
+
+    public func interpretCard(from recognizedText: [String], image: UIImage?) async -> any ScanResult {
+        parseCardResults(for: recognizedText, image: image)
+    }
+
+    public func interpret(recognizedStrings: [String]) async -> any ScanResult {
+        GenericData(scannedData: recognizedStrings)
     }
 }
 
-
 // MARK: - Documents
+
 private extension ScanInterpreter {
-    func parseDocument(scans: VNDocumentCameraScan) -> any ScanResult {
-        let scanPages = (0..<scans.pageCount).compactMap { pageNumber -> Page? in
-            let image = scans.imageOfPage(at: pageNumber)
-            guard let text = extractText(image: image)  else {
-                return nil
+    func parseDocument(scan: VNDocumentCameraScan) async throws(ScanInterpreterError) -> any ScanResult {
+        var scannedPages: [Page] = []
+        for pageNumber in 0..<scan.pageCount {
+            let image = scan.imageOfPage(at: pageNumber)
+            do {
+                let text = try await extractText(from: image)
+                guard !text.isEmpty else { continue }
+                scannedPages.append(Page(pageNumber: pageNumber, image: image, text: text))
+            } catch .noImage {
+                continue // skip pages without a usable image; propagate genuine failures
             }
-            
-            return Page(pageNumber: pageNumber, image: image, text: text)
         }
-        
-        return ScannedDocument(title: scans.title, scannedPages: scanPages)
+        return ScannedDocument(title: scan.title, scannedPages: scannedPages)
     }
 }
 
 // MARK: - Cards
- extension ScanInterpreter {
-    /**
-       Parses and interprets a scanned card.
-       
-       - Parameter scan: A `VNDocumentCameraScan` object containing a scanned card image.
-       
-       - Returns: A `ScanResponse` that represents the interpretation of the scanned card.
-       */
-     private func parseCard(scan: VNDocumentCameraScan) -> any ScanResult {
-         let image = scan.imageOfPage(at: 0)
-         guard let text = extractText(image: image) else {
-             return CardDetails.empty
-         }
-         return parseCardResults(for: text, and: image)
-     }
-}
 
-extension ScanInterpreter: CardInterpreting {
-    public func parseCardResults(for recognizedText: [String], and image: UIImage?) -> any ScanResult {
+private extension ScanInterpreter {
+    func parseCard(scan: VNDocumentCameraScan) async throws(ScanInterpreterError) -> any ScanResult {
+        let image = scan.imageOfPage(at: 0)
+        let text = try await extractText(from: image)
+        return parseCardResults(for: text, image: image)
+    }
+
+    func parseCardResults(for recognizedText: [String], image: UIImage?) -> any ScanResult {
         var expiryDate: String?
         var name: String?
         var creditCardNumber: String?
         var cvv: String?
+
         if let parsedCard = recognizedText.parseCardNumber {
             creditCardNumber = parsedCard
         }
+
         for text in recognizedText {
             if let expiryDateString = text.parseExpiryDate {
                 expiryDate = expiryDateString
             }
-
             if let parsedName = text.parseName {
                 name = parsedName
             }
-
             if let parsedCVV = text.parseCVV(cardNumber: creditCardNumber) {
                 cvv = parsedCVV
             }
@@ -124,43 +99,27 @@ extension ScanInterpreter: CardInterpreting {
     }
 }
 
-// MARK: - Utils
+// MARK: - Text recognition
 
 private extension ScanInterpreter {
-    /**
-     Extracts recognized text from an image.
-     
-     - Parameter image: A `UIImage` containing text.
-     
-     - Returns: An array of recognized text strings, or `nil` if text extraction fails.
-     */
-    func extractText(image: UIImage?) -> [String]? {
-        guard let cgImage = image?.cgImage else { return nil }
-        
-        var recognizedText = [String]()
-        
-        var textRecognitionRequest = VNRecognizeTextRequest()
-        textRecognitionRequest.recognitionLevel = .accurate
-        textRecognitionRequest.usesLanguageCorrection = type == .card ? false : true
+    @concurrent
+    func extractText(from image: UIImage) async throws(ScanInterpreterError) -> [String] {
+        guard let cgImage = image.cgImage else {
+            throw .noImage
+        }
+
+        var request = RecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = type != .card
         if type == .card {
-            textRecognitionRequest.customWords = CardType.allCases.map { $0.rawValue } + ["Expiry Date"]
+            request.customWords = CardType.names + ["Expiry Date"]
         }
-        textRecognitionRequest = VNRecognizeTextRequest { request, _ in
-            guard let results = request.results,
-                  !results.isEmpty,
-                  let requestResults = request.results as? [VNRecognizedTextObservation]
-            else { return }
-            recognizedText = requestResults.compactMap { observation in
-                observation.topCandidates(1).first?.string
-            }
-        }
-        
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+
         do {
-            try handler.perform([textRecognitionRequest])
-            return recognizedText
+            let observations = try await request.perform(on: cgImage)
+            return observations.compactMap { $0.topCandidates(1).first?.string }
         } catch {
-            return nil
+            throw .textRecognitionFailed(error)
         }
     }
 }
