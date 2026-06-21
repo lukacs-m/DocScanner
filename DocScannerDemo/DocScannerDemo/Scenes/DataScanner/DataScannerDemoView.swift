@@ -9,11 +9,11 @@ import DocScanner
 import SwiftUI
 
 struct DataScannerDemoView: View {
-    @StateObject private var viewModel = DataScannerDemoViewModel()
+    @State private var viewModel = DataScannerDemoViewModel()
     @State private var showDeviceNotCapacityAlert = false
-    @State private var show = false
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         VStack {
             scannedContent
                 .padding()
@@ -23,18 +23,23 @@ struct DataScannerDemoView: View {
                 Toggle("Apply scanning field restriction", isOn: $viewModel.applyRegionOfInterest)
                 Spacer()
             }
-            .frame(width: 400)
+
 
             HStack {
                 Spacer()
                 Toggle("Automatically dismiss scanner when scan finished", isOn: $viewModel.automaticDismiss)
                 Spacer()
             }
-            .frame(width: 400)
 
             scanActionButtons
         }
         .fullScreenCover(isPresented: $viewModel.showScanner) {
+            // Read `scanning` in THIS content's scope so it depends on it. With @Observable's
+            // fine-grained observation, passing `$viewModel.scanning` as a binding does not
+            // create a dependency, and reading it only inside the button's label re-renders
+            // just the button. Without this read, toggling `scanning` would not re-evaluate
+            // this view, so DataScanner.updateUIViewController would never run startScanning().
+            let isScanning = viewModel.scanning
             ZStack(alignment: .bottom) {
                 DataScanner(with: viewModel.scanType,
                             startScanning: $viewModel.scanning,
@@ -45,8 +50,8 @@ struct DataScannerDemoView: View {
                             automaticDismiss: viewModel.automaticDismiss,
                             regionOfInterest: $viewModel.regionOfInterest,
                             scanResult: $viewModel.scanResponse,
-                            resultStream: viewModel.scanResponsePublisher) { results in
-                    viewModel.callbackResults(results: results)
+                            resultStream: viewModel.streamBox) { outcome in
+                    viewModel.handle(outcome)
                 }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .overlay(regionOfInterestOverlay)
@@ -72,7 +77,7 @@ struct DataScannerDemoView: View {
                     }
                     VStack{
                         Button {viewModel.scanning.toggle()} label: {
-                            Text( viewModel.scanning ? "Stop scanning" :  "Start Scanning")
+                            Text( isScanning ? "Stop scanning" :  "Start Scanning")
                         }
                         .padding()
 
@@ -88,8 +93,8 @@ struct DataScannerDemoView: View {
             }
         }
         .alert("Scanner Unavailable", isPresented: $showDeviceNotCapacityAlert, actions: {})
-        .onChange(of: viewModel.applyRegionOfInterest) { value in
-            if !value {
+        .onChange(of: viewModel.applyRegionOfInterest) { _, newValue in
+            if !newValue {
                 viewModel.regionOfInterest = nil
             }
         }
@@ -97,6 +102,7 @@ struct DataScannerDemoView: View {
 
     @ViewBuilder
     var regionOfInterestOverlay: some View {
+        @Bindable var viewModel = viewModel
         if viewModel.applyRegionOfInterest {
             RestrictedScanningArea(regionOfInterest: $viewModel.regionOfInterest)
         }
@@ -190,7 +196,7 @@ private extension DataScannerDemoView {
             }
             .padding()
         }
-        .foregroundColor(.black)
+        .foregroundStyle(.black)
         .font(.title3.weight(.semibold))
         .background(.white.opacity(0.5))
         .cornerRadius(10)

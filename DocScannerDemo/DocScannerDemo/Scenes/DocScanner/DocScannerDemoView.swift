@@ -9,16 +9,17 @@ import DocScanner
 import SwiftUI
 
 struct DocScannerDemoView: View {
-    @StateObject private var viewModel = DocScannerDemoViewModel()
-    
+    @State private var viewModel = DocScannerDemoViewModel()
+
     var body: some View {
+        @Bindable var viewModel = viewModel
         ZStack(alignment: .bottom) {
             if viewModel.showScanner {
                 DocScanner(with: viewModel.interpretor,
                            shouldDismiss: $viewModel.showScanner,
                            scanResult: $viewModel.scanResponse,
-                           resultStream: viewModel.scanResponsePublisher) { results in
-                    viewModel.callbackResults(results: results)
+                           resultStream: viewModel.streamBox) { outcome in
+                    viewModel.handle(outcome)
                 }
             } else {
                 scannedContent
@@ -91,7 +92,7 @@ private extension DocScannerDemoView {
             }
             .padding()
         }
-        .foregroundColor(.black)
+        .foregroundStyle(.black)
         .font(.title3.weight(.semibold))
         .background(.white.opacity(0.5))
         .cornerRadius(10)

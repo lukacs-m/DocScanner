@@ -85,9 +85,7 @@ public enum CardType: String, CaseIterable, Identifiable, Sendable {
 
     public var id: Int { hashValue }
     
-    public static var names: [String] {
-        CardType.allCases.map { $0.rawValue }
-    }
+    public static let names: [String] = CardType.allCases.map(\.rawValue)
 }
 
 // First digit: Represents the network that produced the credit card. It is called the Major Industry Identifier (MII).

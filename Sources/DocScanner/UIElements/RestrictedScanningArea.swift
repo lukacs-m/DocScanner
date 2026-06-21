@@ -47,19 +47,17 @@ public struct RestrictedScanningArea: View {
     public var body: some View {
         ZStack {
             Rectangle()
-                .foregroundColor(configuration.overlayColor)
-            
+                .foregroundStyle(configuration.overlayColor)
+
             Rectangle()
                 .frame(width: configuration.sizeOfArea.width, height: configuration.sizeOfArea.height)
                 .blendMode(.destinationOut)
                 .overlay(border)
-                .background(
-                    GeometryReader { geometry -> Color in
-                        DispatchQueue.main.async {
-                            regionOfInterest = geometry.frame(in: .global)
-                        }
-                        return Color.clear
-                    })
+                .onGeometryChange(for: CGRect.self) { proxy in
+                    proxy.frame(in: .global)
+                } action: { newValue in
+                    regionOfInterest = newValue
+                }
         }
         .compositingGroup()
     }

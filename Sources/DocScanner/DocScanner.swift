@@ -1,129 +1,106 @@
-import Combine
 import SwiftUI
-import Vision
 import VisionKit
 
 /**
  The `DocScanner` is a tool facilitating document scanning using the device's camera and handling the scanned document results.
+
+ Results are delivered through three optional channels: a completion closure, a SwiftUI
+ `@Binding`, and an `AsyncStream` (via ``ScanResultStreamBox``). Use any subset.
  */
 public struct DocScanner: UIViewControllerRepresentable {
     private let interpreter: (any ScanInterpreting)?
-    private let completionHandler: (Result<(any ScanResult)?, (any Error)>) -> Void
-    private let resultStream: PassthroughSubject<Result<(any ScanResult)?, (any Error)>, Never>?
+    private let completionHandler: (ScanOutcome) -> Void
+    private let resultStream: ScanResultStreamBox?
     @Binding private var scanResult: (any ScanResult)?
     @Binding private var shouldDismiss: Bool
+
     public typealias UIViewControllerType = VNDocumentCameraViewController
-    
+
     @MainActor
     public static var isSupported: Bool {
         VNDocumentCameraViewController.isSupported
     }
-    
+
     /**
      Initializes a `DocScanner` view.
-     
+
      - Parameters:
-        - interpreter: An optional `ScanInterpreting` object for interpreting scan results.
+        - interpreter: An optional `ScanInterpreting` object for interpreting scan results. When `nil`, a default `ScanInterpreter(type: .document)` is used.
+        - shouldDismiss: A binding toggled when the scanner finishes, fails, or is cancelled.
         - scanResult: A binding to the scan result.
-        - resultStream: An optional result stream for observing scan responses.
-        - completion: A closure to handle the completion of scanning.
+        - resultStream: An optional stream box for observing scan outcomes as an `AsyncStream`.
+        - completion: A closure handling the scan outcome.
     */
     public init(with interpreter: (any ScanInterpreting)? = nil,
-                shouldDismiss: Binding<Bool> = Binding.constant(false),
-                scanResult: Binding<(any ScanResult)?> = Binding.constant(nil),
-                resultStream: PassthroughSubject<Result<(any ScanResult)?, (any Error)>, Never>? = nil,
-                completion: @escaping (Result<(any ScanResult)?, any Error>) -> Void = { _ in }) {
+                shouldDismiss: Binding<Bool> = .constant(false),
+                scanResult: Binding<(any ScanResult)?> = .constant(nil),
+                resultStream: ScanResultStreamBox? = nil,
+                completion: @escaping (ScanOutcome) -> Void = { _ in }) {
         self.completionHandler = completion
         self._scanResult = scanResult
         self.resultStream = resultStream
         self.interpreter = interpreter
         self._shouldDismiss = shouldDismiss
     }
-    
-    public func makeUIViewController(context: UIViewControllerRepresentableContext<DocScanner>) -> VNDocumentCameraViewController {
+
+    public func makeUIViewController(context: Context) -> VNDocumentCameraViewController {
         let viewController = VNDocumentCameraViewController()
         viewController.delegate = context.coordinator
         return viewController
     }
-    
-    public func updateUIViewController(_ uiViewController: VNDocumentCameraViewController,
-                                       context: UIViewControllerRepresentableContext<DocScanner>) {
-    }
-    
+
+    public func updateUIViewController(_ uiViewController: VNDocumentCameraViewController, context: Context) {}
+
     public func makeCoordinator() -> Coordinator {
         Coordinator(self, and: interpreter)
     }
-  
-    public final class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate, @unchecked Sendable {
+
+    @MainActor
+    public final class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate {
         private let docScanner: DocScanner
-        private let interpreter: (any ScanInterpreting)?
+        private let interpreter: any ScanInterpreting
 
         init(_ docScanner: DocScanner, and interpreter: (any ScanInterpreting)? = nil) {
             self.docScanner = docScanner
-            self.interpreter = interpreter
+            self.interpreter = interpreter ?? ScanInterpreter(type: .document)
         }
-        
-        /**
-         Handles the completion of scanning with scanned document pages.
-         
-         - Parameters:
-            - controller: The `VNDocumentCameraViewController` instance.
-            - scan: The `VNDocumentCameraScan` containing scanned document pages.
-         */
+
+        /// Handles the completion of scanning with scanned document pages.
         public func documentCameraViewController(_ controller: VNDocumentCameraViewController,
                                                  didFinishWith scan: VNDocumentCameraScan) {
-            guard let interpreter = interpreter as? (any DocScanInterpreting) else {
-                respond(with: scan, controller: controller)
-                return
-            }
-            Task { @MainActor [weak self] in
-                let response = await interpreter.parseAndInterpret(scans: scan)
-                self?.respond(with: response, controller: controller)
+            Task {
+                do {
+                    let result = try await interpreter.interpret(scan: scan)
+                    respond(with: .scanned(result), controller: controller)
+                } catch {
+                    respond(with: .failed(error), controller: controller)
+                }
             }
         }
-        
-        /**
-         Handles the cancellation of scanning.
-         
-         - Parameter controller: The `VNDocumentCameraViewController` instance.
-         */
+
+        /// Handles the cancellation of scanning.
         public func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
-            Task { @MainActor [weak self] in
-                self?.respond(with: nil, controller: controller)
-            }
+            respond(with: .cancelled, controller: controller)
         }
-        
-        /**
-         Handles errors that might occur during scanning.
-         
-         - Parameters:
-            - controller: The `VNDocumentCameraViewController` instance.
-            - error: The error that occurred during scanning.
-         */
+
+        /// Handles errors that might occur during scanning.
         public func documentCameraViewController(_ controller: VNDocumentCameraViewController,
                                                  didFailWithError error: any Error) {
-            Task { @MainActor [weak self] in
-                self?.docScanner.completionHandler(.failure(error))
-                self?.docScanner.scanResult = nil
-                self?.docScanner.resultStream?.send(.failure(error))
-                self?.docScanner.shouldDismiss.toggle()
-                controller.dismiss(animated: true)
-            }
+            respond(with: .failed(error), controller: controller)
         }
-        
-        /**
-            Sends the interpreted scan response to the provided result stream and completion handler.
-            
-            - Parameter result: The interpreted scan response.
-        */
-        private func respond(with result: (any ScanResult)?, controller: VNDocumentCameraViewController) {
-            Task { @MainActor [weak self] in
-                self?.docScanner.completionHandler(.success(result))
-                self?.docScanner.scanResult = result
-                self?.docScanner.resultStream?.send(.success(result))
-                self?.docScanner.shouldDismiss.toggle()
-                controller.dismiss(animated: true)
+
+        /// Sends the scan outcome to every delivery channel and dismisses the scanner.
+        private func respond(with outcome: ScanOutcome, controller: VNDocumentCameraViewController) {
+            docScanner.completionHandler(outcome)
+            docScanner.resultStream?.yield(outcome)
+            switch outcome {
+            case let .scanned(result):
+                docScanner.scanResult = result
+            case .cancelled, .failed:
+                docScanner.scanResult = nil
             }
+            docScanner.shouldDismiss.toggle()
+            controller.dismiss(animated: true)
         }
     }
 }

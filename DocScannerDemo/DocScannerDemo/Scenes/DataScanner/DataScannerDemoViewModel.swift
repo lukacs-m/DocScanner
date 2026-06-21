@@ -5,50 +5,51 @@
 //  Created by martin on 04/09/2023.
 //
 
-import Foundation
 import DocScanner
-import Combine
+import Foundation
+import Observation
 
 @MainActor
-final class DataScannerDemoViewModel: ObservableObject {
-    @Published var scanResponse: ScanResult?
-    @Published var showScanner = false
-    @Published var scanning = false
-    @Published var applyRegionOfInterest = false
-    @Published var automaticDismiss = true
-    @Published var regionOfInterest: CGRect?
+@Observable
+final class DataScannerDemoViewModel {
+    var scanResponse: (any ScanResult)?
+    var showScanner = false
+    var scanning = false
+    var applyRegionOfInterest = false
+    var automaticDismiss = true
+    var regionOfInterest: CGRect?
 
-    let scanResponsePublisher: PassthroughSubject<Result<ScanResult, Error>, Never> = .init()
+    /// Pass this to `DataScanner(resultStream:)` to receive outcomes as an `AsyncStream`.
+    let streamBox = ScanResultStreamBox()
     private(set) var scanType: DataScannerConfiguration = .default
-    private var cancellable = Set<AnyCancellable>()
-    
-    @MainActor
+    @ObservationIgnored private var streamTask: Task<Void, Never>?
+
     var isScanningPossible: Bool {
         DataScanner.scannerAvailable
     }
-    
+
     init() {
-       scanResponsePublisher
-            .receive(on: DispatchQueue.main)
-            .sink { scanResult in
-                print("Publisher scan results: \(String(describing: scanResult))")
-            }.store(in: &cancellable)
-        
-        $scanResponse
-            .receive(on: DispatchQueue.main)
-            .sink { scanResult in
-                print("@Published scan results: \(String(describing: scanResult))")
-            }.store(in: &cancellable)
+        // Demonstrates the AsyncStream channel (replaces the old Combine `.values`).
+        streamTask = Task { [streamBox] in
+            for await outcome in streamBox.stream {
+                print("AsyncStream outcome: \(outcome)")
+            }
+        }
     }
-    
+
+    deinit {
+        streamTask?.cancel()
+    }
+
     func startScan(for type: DataScannerConfiguration) {
         scanType = type
         reset()
         showScanner.toggle()
     }
-    
-    func callbackResults(results: Result<ScanResult?, Error>) {
-        print("Callback scan results: \(results)")
+
+    /// Demonstrates the completion-closure channel.
+    func handle(_ outcome: ScanOutcome) {
+        print("Callback outcome: \(outcome)")
     }
 
     func reset() {
