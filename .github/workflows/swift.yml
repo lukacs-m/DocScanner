@@ -16,7 +16,7 @@ jobs:
     # not the macOS host. Adjust the runner image if your org pins a different one.
     runs-on: macos-26
     env:
-      SIMULATOR: 'platform=iOS Simulator,name=iPhone 16'
+      SIMULATOR: 'platform=iOS Simulator,name=iPhone 17'
     steps:
     - uses: actions/checkout@v4
 
